@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Lato:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:'Lato',system-ui,sans-serif;background:#f2efef}
+  a{color:#ad0505;text-decoration:none}
+  a:hover{color:#7f0101}
+  ::selection{background:#f3cfcf}
+  @media print{.no-print{display:none!important}}
+</style>
+</helmet>
+<div style="{{ rootStyle }}">
+
+  <!-- Sidebar -->
+  <aside class="no-print" style="width:248px;flex:none;background:var(--panel,#fff);border-right:1px solid var(--border,#e4dede);display:flex;flex-direction:column;padding:24px 18px;position:sticky;top:0;height:100vh">
+    <div style="display:flex;flex-direction:column;gap:11px;padding:0 6px 22px">
+      <div style="background:#fff;border:1px solid var(--border,#e4dede);border-radius:9px;padding:9px 13px;display:inline-flex;align-items:center;align-self:flex-start"><img src="assets/siplan.png" alt="Siplan" style="height:27px;width:auto;display:block"></div>
+      <div style="font-family:'Oswald',sans-serif;font-size:14px;font-weight:600;letter-spacing:1.2px;line-height:1.05;text-transform:uppercase;color:var(--headerBrand,#7f0101)">Controle de Ponto</div>
+    </div>
+
+    <nav style="display:flex;flex-direction:column;gap:4px;margin-top:8px">
+      <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="3">
+        <button onClick="{{ item.onClick }}" style="{{ item.style }}display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:none;cursor:pointer;padding:11px 13px;border-radius:9px;font-family:'Lato';font-size:14px;font-weight:700;transition:background .12s">
+          <span style="width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center" dangerouslySetInnerHTML="{{ item.icon }}"></span>
+          {{ item.label }}
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto;padding:14px 13px;border-radius:11px;background:var(--stripe,#faf6f6);border:1px solid var(--border,#e4dede)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:3px">Colaborador</div>
+      <div style="font-size:14px;font-weight:700;line-height:1.25">{{ funcionario }}</div>
+      <div style="margin-top:9px;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted,#999)">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--credit,#2f7d5b);display:inline-block"></span>
+        Jornada {{ cargaPadrao }}/dia
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main style="flex:1;min-width:0;padding:26px 34px 44px">
+
+    <!-- Top bar: view title + month nav -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:24px">
+      <div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,#999)">{{ viewKicker }}</div>
+        <h1 style="margin:2px 0 0;font-family:'Oswald',sans-serif;font-size:30px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;color:var(--text,#2a2020)">{{ viewTitle }}</h1>
+      </div>
+      <div class="no-print" style="display:flex;align-items:center;gap:6px;background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:11px;padding:5px">
+        <button onClick="{{ prevMonth }}" style-hover="background:var(--stripe,#faf6f6)" style="cursor:pointer;border:none;background:transparent;color:var(--text,#2a2020);width:36px;height:36px;border-radius:8px;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center">‹</button>
+        <div style="min-width:158px;text-align:center;font-weight:700;font-size:14.5px;text-transform:capitalize;font-family:'Oswald',sans-serif;letter-spacing:.5px">{{ monthLabel }}</div>
+        <button onClick="{{ nextMonth }}" style-hover="background:var(--stripe,#faf6f6)" style="cursor:pointer;border:none;background:transparent;color:var(--text,#2a2020);width:36px;height:36px;border-radius:8px;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center">›</button>
+      </div>
+    </div>
+
+    <!-- ============ PAINEL ============ -->
+    <sc-if value="{{ isPainel }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <!-- KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;right:0;height:4px;background:{{ k.accent }}"></div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:10px">{{ k.label }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;line-height:1;color:{{ k.color }}">{{ k.value }}</div>
+            <div style="font-size:12px;color:var(--muted,#999);margin-top:7px">{{ k.sub }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:16px">
+        <!-- Chart -->
+        <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:20px 22px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px">
+            <div style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Horas por dia</div>
+            <div style="font-size:12px;color:var(--muted,#999)">meta {{ cargaPadrao }}</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:5px;height:170px;padding-top:14px;border-bottom:1px solid var(--border,#e4dede)">
+            <sc-for list="{{ chart }}" as="b" hint-placeholder-count="22">
+              <div title="{{ b.title }}" style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:5px">
+                <div style="width:100%;max-width:22px;border-radius:4px 4px 0 0;background:{{ b.color }};height:{{ b.h }};min-height:2px;transition:height .2s"></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:9px;font-size:10.5px;color:var(--muted,#999)">
+            <span>{{ chartFirst }}</span><span>{{ chartLast }}</span>
+          </div>
+        </div>
+
+        <!-- Saldo card -->
+        <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column">
+          <div style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px">Resultado do mês</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border,#e4dede)">
+              <span style="font-size:13px;color:var(--muted,#999)">Horas extras</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--credit,#2f7d5b)">{{ totalExtras }}</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border,#e4dede)">
+              <span style="font-size:13px;color:var(--muted,#999)">Atraso / Falta</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--debit,#d52d2d)">{{ totalDebit }}</span>
+            </div>
+          </div>
+          <div style="margin-top:auto;padding-top:18px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted,#999)">Saldo do banco de horas</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:600;line-height:1.1;color:{{ saldoColor }}">{{ saldoTxt }}</div>
+            <div style="font-size:12px;color:var(--muted,#999);margin-top:2px">{{ saldoNote }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ REGISTRAR ============ -->
+    <sc-if value="{{ isRegistrar }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:860px">
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:11px;background:var(--focus,#fbeded);border:1px solid var(--debit,#d52d2d);border-radius:11px;padding:13px 18px;margin-bottom:18px;color:var(--debit,#d52d2d);font-size:13.5px;font-weight:700">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Período encerrado — edição bloqueada. Reabra em Configurações para lançar.
+        </div>
+      </sc-if>
+      <!-- Day selector -->
+      <div class="no-print" style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:11px;padding:5px">
+          <button onClick="{{ prevDay }}" style-hover="background:var(--stripe,#faf6f6)" style="cursor:pointer;border:none;background:transparent;color:var(--text,#2a2020);width:34px;height:34px;border-radius:8px;font-size:18px">‹</button>
+          <div style="min-width:150px;text-align:center;font-weight:700;font-family:'IBM Plex Mono',monospace;font-size:14px">{{ sel.label }}</div>
+          <button onClick="{{ nextDay }}" style-hover="background:var(--stripe,#faf6f6)" style="cursor:pointer;border:none;background:transparent;color:var(--text,#2a2020);width:34px;height:34px;border-radius:8px;font-size:18px">›</button>
+        </div>
+        <button onClick="{{ goToday }}" style-hover="border-color:var(--accent,#ad0505);color:var(--accent,#ad0505)" style="cursor:pointer;background:var(--panel,#fff);border:1px solid var(--border,#e4dede);color:var(--muted,#999);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;font-family:inherit">Hoje</button>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:20px;background:{{ sel.statusBg }};color:{{ sel.statusColor }};font-size:12.5px;font-weight:700">
+          <span style="width:8px;height:8px;border-radius:50%;background:{{ sel.statusColor }}"></span>{{ sel.statusText }}
+        </div>
+      </div>
+
+      <!-- Punch cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+        <sc-for list="{{ punches }}" as="p" hint-placeholder-count="4">
+          <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:16px 15px;display:flex;flex-direction:column;align-items:center;gap:12px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999);text-align:center">{{ p.label }}</div>
+            <input type="text" inputMode="numeric" maxLength="5" placeholder="--:--" value="{{ p.value }}" onChange="{{ p.onChange }}" disabled="{{ locked }}" style-focus="border-color:var(--accent,#ad0505);background:var(--focus,#fbeded)" style="width:100%;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--text,#2a2020);border:1.5px solid var(--border,#e4dede);border-radius:10px;padding:10px 4px;background:var(--bg,#f2efef);outline:none">
+            <button onClick="{{ p.onNow }}" disabled="{{ locked }}" style-hover="background:var(--accent,#ad0505);color:#fff;border-color:var(--accent,#ad0505)" style="cursor:pointer;background:transparent;border:1px solid var(--border,#e4dede);color:var(--accent,#ad0505);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;font-family:inherit;width:100%;transition:.12s">Agora</button>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- Live result -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:12px;padding:15px 18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:7px">Carga do dia</div>
+          <input value="{{ sel.carga }}" onChange="{{ sel.onCarga }}" disabled="{{ locked }}" placeholder="08:00" style-focus="border-color:var(--accent,#ad0505)" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--text,#2a2020);border:none;border-bottom:1.5px solid var(--border,#e4dede);padding:2px 0;background:transparent;outline:none">
+        </div>
+        <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:12px;padding:15px 18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:7px">Trabalhadas</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600">{{ sel.horasTrab }}</div>
+        </div>
+        <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:12px;padding:15px 18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:7px">Extras</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--credit,#2f7d5b)">{{ sel.extras }}</div>
+        </div>
+        <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:12px;padding:15px 18px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted,#999);margin-bottom:7px">BH / Atr / Falta</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;color:var(--debit,#d52d2d)">{{ sel.bh }}</div>
+        </div>
+      </div>
+
+      <p style="font-size:12.5px;color:var(--muted,#999);line-height:1.6;margin:20px 0 0">Preencha os horários em qualquer ordem — use <strong style="color:var(--text,#2a2020)">Agora</strong> para carregar o horário atual. O cálculo é instantâneo e salvo automaticamente.</p>
+    </div>
+    </sc-if>
+
+    <!-- ============ ESPELHO ============ -->
+    <sc-if value="{{ isEspelho }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <sc-if value="{{ locked }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:11px;background:var(--focus,#fbeded);border:1px solid var(--debit,#d52d2d);border-radius:11px;padding:13px 18px;margin-bottom:16px;color:var(--debit,#d52d2d);font-size:13.5px;font-weight:700">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Período encerrado — edição bloqueada.
+        </div>
+      </sc-if>
+      <div class="no-print" style="display:flex;gap:10px;margin-bottom:16px">
+        <button onClick="{{ doPrint }}" style-hover="border-color:var(--accent,#ad0505);color:var(--accent,#ad0505)" style="cursor:pointer;background:var(--panel,#fff);border:1px solid var(--border,#e4dede);color:var(--muted,#999);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;font-family:inherit">Imprimir</button>
+        <button onClick="{{ clearMonth }}" style-hover="border-color:var(--debit,#d52d2d);color:var(--debit,#d52d2d)" style="cursor:pointer;background:var(--panel,#fff);border:1px solid var(--border,#e4dede);color:var(--muted,#999);border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;font-family:inherit">Limpar mês</button>
+      </div>
+      <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px">
+          <thead>
+            <tr style="background:var(--headerBg,#7f0101);color:var(--headerText,#fff)">
+              <th style="text-align:left;padding:13px 16px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap">Dia</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Carga</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Entrada</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Saída almoço</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Volta almoço</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Saída</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Trabalhadas</th>
+              <th style="text-align:center;padding:13px 8px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Extras</th>
+              <th style="text-align:center;padding:13px 16px;font-family:'Oswald',sans-serif;font-size:12px;font-weight:500;letter-spacing:.8px;text-transform:uppercase">Atraso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ rows }}" as="row" hint-placeholder-count="10">
+              <tr style="border-top:1px solid var(--rowBorder,#efeaea);background:{{ row.rowBg }}">
+                <td style="padding:0 16px;font-weight:700;white-space:nowrap">{{ row.data }}</td>
+                <td style="padding:0;text-align:center"><input value="{{ row.carga }}" onChange="{{ row.onCarga }}" disabled="{{ locked }}" placeholder="08:00" style-focus="background:var(--focus,#fbeded)" style="width:100%;border:none;background:transparent;text-align:center;padding:11px 4px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--muted,#999);outline:none"></td>
+                <td style="padding:0;text-align:center;border-left:1px solid var(--rowBorder,#efeaea)"><input type="text" inputMode="numeric" maxLength="5" placeholder="--:--" value="{{ row.entrada }}" onChange="{{ row.onEntrada }}" disabled="{{ locked }}" style-focus="background:var(--focus,#fbeded)" style="width:100%;border:none;background:transparent;text-align:center;padding:11px 4px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--text,#2a2020);outline:none"></td>
+                <td style="padding:0;text-align:center"><input type="text" inputMode="numeric" maxLength="5" placeholder="--:--" value="{{ row.saidaAlmoco }}" onChange="{{ row.onSaidaAlmoco }}" disabled="{{ locked }}" style-focus="background:var(--focus,#fbeded)" style="width:100%;border:none;background:transparent;text-align:center;padding:11px 4px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--text,#2a2020);outline:none"></td>
+                <td style="padding:0;text-align:center"><input type="text" inputMode="numeric" maxLength="5" placeholder="--:--" value="{{ row.voltaAlmoco }}" onChange="{{ row.onVoltaAlmoco }}" disabled="{{ locked }}" style-focus="background:var(--focus,#fbeded)" style="width:100%;border:none;background:transparent;text-align:center;padding:11px 4px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--text,#2a2020);outline:none"></td>
+                <td style="padding:0;text-align:center;border-right:1px solid var(--rowBorder,#efeaea)"><input type="text" inputMode="numeric" maxLength="5" placeholder="--:--" value="{{ row.saida }}" onChange="{{ row.onSaida }}" disabled="{{ locked }}" style-focus="background:var(--focus,#fbeded)" style="width:100%;border:none;background:transparent;text-align:center;padding:11px 4px;font-family:'IBM Plex Mono',monospace;font-size:13.5px;color:var(--text,#2a2020);outline:none"></td>
+                <td style="padding:11px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600">{{ row.horasTrab }}</td>
+                <td style="padding:11px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:500;color:{{ row.extrasColor }}">{{ row.extras }}</td>
+                <td style="padding:11px 16px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:500;color:{{ row.bhColor }}">{{ row.bh }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+          <tfoot>
+            <tr style="border-top:2px solid var(--headerBg,#7f0101);background:var(--stripe,#faf6f6);font-weight:700">
+              <td style="padding:13px 16px;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.5px" colspan="6">Resultado do mês</td>
+              <td style="padding:13px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600">{{ totalTrab }}</td>
+              <td style="padding:13px 8px;text-align:center;font-family:'IBM Plex Mono',monospace;color:var(--credit,#2f7d5b)">{{ totalExtras }}</td>
+              <td style="padding:13px 16px;text-align:center;font-family:'IBM Plex Mono',monospace;color:{{ saldoColor }}">{{ saldoTxt }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ CONFIGURAÇÕES ============ -->
+    <sc-if value="{{ isConfig }}" hint-placeholder-val="{{ false }}">
+    <div style="max-width:640px;display:flex;flex-direction:column;gap:18px">
+
+      <!-- Colaborador -->
+      <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:22px 24px">
+        <div style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:18px">Dados do colaborador</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px">
+          <label style="display:flex;flex-direction:column;gap:7px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999)">Nome</span>
+            <input value="{{ cfgNome }}" onChange="{{ onNome }}" placeholder="Nome do colaborador" style-focus="border-color:var(--accent,#ad0505)" style="font-family:'Lato';font-size:15px;font-weight:600;color:var(--text,#2a2020);border:1.5px solid var(--border,#e4dede);border-radius:9px;padding:11px 13px;background:var(--bg,#f2efef);outline:none">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:7px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999)">Jornada / dia</span>
+            <input value="{{ cfgJornada }}" onChange="{{ onJornada }}" inputMode="numeric" maxLength="5" placeholder="08:00" style-focus="border-color:var(--accent,#ad0505)" style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;color:var(--text,#2a2020);border:1.5px solid var(--border,#e4dede);border-radius:9px;padding:11px 13px;background:var(--bg,#f2efef);outline:none;text-align:center">
+          </label>
+        </div>
+      </div>
+
+      <!-- Período -->
+      <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:22px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Período</div>
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 13px;border-radius:20px;background:{{ statusPeriodoBg }};color:{{ statusPeriodoColor }};font-size:12px;font-weight:700">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ statusPeriodoColor }}"></span>{{ statusPeriodoText }}
+          </div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999)">Nome do período</span>
+          <input value="{{ periodoNome }}" onChange="{{ onPeriodoNome }}" placeholder="Ex.: Competência Junho/Julho 2026" style-focus="border-color:var(--accent,#ad0505)" style="font-family:'Lato';font-size:15px;font-weight:600;color:var(--text,#2a2020);border:1.5px solid var(--border,#e4dede);border-radius:9px;padding:11px 13px;background:var(--bg,#f2efef);outline:none">
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <label style="display:flex;flex-direction:column;gap:7px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999)">Data de início</span>
+            <input type="date" value="{{ periodoInicio }}" onChange="{{ onInicio }}" style-focus="border-color:var(--accent,#ad0505)" style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:var(--text,#2a2020);border:1.5px solid var(--border,#e4dede);border-radius:9px;padding:10px 13px;background:var(--bg,#f2efef);outline:none">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:7px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted,#999)">Data de fim</span>
+            <input type="date" value="{{ periodoFim }}" onChange="{{ onFim }}" style-focus="border-color:var(--accent,#ad0505)" style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:var(--text,#2a2020);border:1.5px solid var(--border,#e4dede);border-radius:9px;padding:10px 13px;background:var(--bg,#f2efef);outline:none">
+          </label>
+        </div>
+        <button onClick="{{ togglePeriodo }}" style="{{ periodoBtnStyle }}cursor:pointer;border-radius:9px;padding:11px 20px;font-size:13.5px;font-weight:700;font-family:'Lato'">{{ btnPeriodoLabel }}</button>
+        <p style="font-size:12px;color:var(--muted,#999);line-height:1.5;margin:12px 0 0">Ao encerrar, os lançamentos do período ficam bloqueados para edição. Reabra para ajustar.</p>
+      </div>
+
+      <!-- Tema -->
+      <div style="background:var(--panel,#fff);border:1px solid var(--border,#e4dede);border-radius:14px;padding:22px 24px">
+        <div style="font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px">Tema</div>
+        <div style="display:flex;gap:10px">
+          <sc-for list="{{ temaOpts }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.onClick }}" style="{{ t.style }}flex:1;cursor:pointer;border:1.5px solid;border-radius:10px;padding:13px 10px;font-size:13.5px;font-weight:700;font-family:'Lato';transition:.12s">{{ t.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+    </div>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800},&quot;tema&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;classico&quot;,&quot;minimal&quot;,&quot;escuro&quot;],&quot;default&quot;:&quot;classico&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Visual&quot;},&quot;corDestaque&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ad0505&quot;,&quot;options&quot;:[&quot;#ad0505&quot;,&quot;#7f0101&quot;,&quot;#5a0000&quot;,&quot;#d52d2d&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Visual&quot;},&quot;empresa&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;SIPLAN&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conteúdo&quot;},&quot;funcionario&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;José Eduardo Pieretti&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conteúdo&quot;},&quot;cargaPadrao&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;08:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conteúdo&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: 'painel', monthKey: '2026-07', data: {}, selectedDay: 0,
+    cfg: { nome: '', jornada: '', periodoNome: '', periodoInicio: '', periodoFim: '', encerrado: false, tema: 'claro' }
+  };
+
+  MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  DIAS = ['dom','seg','ter','qua','qui','sex','sáb'];
+  STORAGE = 'ponto_siplan_v1';
+  CFG_KEY = 'ponto_siplan_cfg_v1';
+
+  ICONS = {
+    painel: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+    registrar: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    espelho: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>',
+    config: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.4" fill="currentColor" stroke="none"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2.4" fill="currentColor" stroke="none"/></svg>'
+  };
+
+  componentDidMount() {
+    let cfg = { ...this.state.cfg };
+    try { const rawc = localStorage.getItem(this.CFG_KEY); if (rawc) cfg = { ...cfg, ...(JSON.parse(rawc) || {}) }; } catch (e) {}
+    if (!cfg.nome) cfg.nome = this.props.funcionario || 'José Eduardo Pieretti';
+    if (!cfg.jornada) cfg.jornada = this.props.cargaPadrao || '08:00';
+    let data = {};
+    try { const raw = localStorage.getItem(this.STORAGE); if (raw) data = JSON.parse(raw) || {}; } catch (e) {}
+    if (!data[this.state.monthKey]) data[this.state.monthKey] = this.genMonth(this.state.monthKey);
+    let selectedDay = 0;
+    const today = new Date();
+    const tkey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    if (tkey === this.state.monthKey) {
+      const i = data[this.state.monthKey].findIndex(r => r.day === today.getDate());
+      if (i >= 0) selectedDay = i;
+    }
+    this.setState({ data, selectedDay, cfg });
+    try {
+      this._mq = window.matchMedia('(prefers-color-scheme: dark)');
+      this._mqHandler = () => { if (this.state.cfg.tema === 'sistema') this.forceUpdate(); };
+      this._mq.addEventListener('change', this._mqHandler);
+    } catch (e) {}
+  }
+
+  componentWillUnmount() { try { this._mq.removeEventListener('change', this._mqHandler); } catch (e) {} }
+
+  jornada() { return (this.state.cfg && this.state.cfg.jornada) || this.props.cargaPadrao || '08:00'; }
+
+  saveCfg(cfg) { try { localStorage.setItem(this.CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
+  setCfg(field, val) { const cfg = { ...this.state.cfg, [field]: val }; this.saveCfg(cfg); this.setState({ cfg }); }
+  toggleEncerrado() { this.setCfg('encerrado', !this.state.cfg.encerrado); }
+
+  genMonth(key) {
+    const [y, mo] = key.split('-').map(Number);
+    const days = new Date(y, mo, 0).getDate();
+    const rows = [];
+    const carga = this.jornada();
+    for (let d = 1; d <= days; d++) {
+      const dt = new Date(y, mo - 1, d);
+      const wd = dt.getDay();
+      if (wd >= 1 && wd <= 5) {
+        const label = String(d).padStart(2,'0') + '/' + String(mo).padStart(2,'0') + '/' + String(y).slice(2) + ' - ' + this.DIAS[wd];
+        rows.push({ data: label, day: d, carga, entrada:'', saidaAlmoco:'', voltaAlmoco:'', saida:'' });
+      }
+    }
+    return rows;
+  }
+
+  save(data) { try { localStorage.setItem(this.STORAGE, JSON.stringify(data)); } catch (e) {} }
+  ensure(data, key) { if (!data[key]) data[key] = this.genMonth(key); return data; }
+
+  parse(s) {
+    if (!s || typeof s !== 'string') return null;
+    const m = s.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return null;
+    return parseInt(m[1],10) * 60 + parseInt(m[2],10);
+  }
+
+  fmt(mins) {
+    const neg = mins < 0; mins = Math.abs(Math.round(mins));
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return (neg ? '-' : '') + h + ':' + String(m).padStart(2,'0');
+  }
+
+  compute(r) {
+    const e = this.parse(r.entrada), sa = this.parse(r.saidaAlmoco), va = this.parse(r.voltaAlmoco), s = this.parse(r.saida);
+    const carga = this.parse(r.carga) ?? this.parse(this.jornada());
+    let worked = 0, have = false, filled = 0;
+    [r.entrada, r.saidaAlmoco, r.voltaAlmoco, r.saida].forEach(v => { if (this.parse(v) != null) filled++; });
+    if (e != null && sa != null) { worked += sa - e; have = true; }
+    if (va != null && s != null) { worked += s - va; have = true; }
+    if (!have && e != null && s != null && sa == null && va == null) { worked = s - e; have = true; }
+    if (!have) return { have: false, worked: 0, diff: 0, filled };
+    const diff = worked - (carga ?? 0);
+    return { have: true, worked, diff, carga, filled };
+  }
+
+  mask(v) {
+    const d = (v || '').replace(/\D/g, '').slice(0, 4);
+    if (d.length <= 2) return d;
+    return d.slice(0, 2) + ':' + d.slice(2);
+  }
+
+  update(idx, field, val) {
+    const data = { ...this.state.data };
+    const key = this.state.monthKey;
+    this.ensure(data, key);
+    const arr = data[key].slice();
+    arr[idx] = { ...arr[idx], [field]: this.mask(val) };
+    data[key] = arr;
+    this.save(data);
+    this.setState({ data });
+  }
+
+  updateSel(field, val) { this.update(this.state.selectedDay, field, val); }
+
+  setNow(field) {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    this.updateSel(field, hh);
+  }
+
+  changeMonth(delta) {
+    let [y, mo] = this.state.monthKey.split('-').map(Number);
+    mo += delta;
+    if (mo < 1) { mo = 12; y--; }
+    if (mo > 12) { mo = 1; y++; }
+    const key = y + '-' + String(mo).padStart(2,'0');
+    const data = { ...this.state.data };
+    this.ensure(data, key);
+    this.save(data);
+    const len = data[key].length;
+    this.setState({ data, monthKey: key, selectedDay: Math.min(this.state.selectedDay, len - 1) });
+  }
+
+  changeDay(delta) {
+    const len = (this.state.data[this.state.monthKey] || []).length;
+    let i = this.state.selectedDay + delta;
+    if (i < 0) i = 0; if (i > len - 1) i = len - 1;
+    this.setState({ selectedDay: i });
+  }
+
+  goToday() {
+    const today = new Date();
+    const tkey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    const data = { ...this.state.data };
+    this.ensure(data, tkey);
+    let i = data[tkey].findIndex(r => r.day === today.getDate());
+    if (i < 0) i = 0;
+    this.save(data);
+    this.setState({ data, monthKey: tkey, selectedDay: i });
+  }
+
+  clearMonth() {
+    const data = { ...this.state.data };
+    data[this.state.monthKey] = this.genMonth(this.state.monthKey);
+    this.save(data);
+    this.setState({ data });
+  }
+
+  theme() {
+    let mode = (this.state.cfg && this.state.cfg.tema) || 'claro';
+    if (mode === 'sistema') {
+      let dark = false;
+      try { dark = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) {}
+      mode = dark ? 'escuro' : 'claro';
+    }
+    const t = mode === 'escuro' ? 'escuro' : 'classico';
+    const themes = {
+      classico: { bg:'#f2efef', panel:'#ffffff', border:'#e4dede', rowBorder:'#efeaea', text:'#2a2020', muted:'#999999', headerBg:'#7f0101', headerText:'#ffffff', headerBrand:'#7f0101', accent:'#ad0505', focus:'#fbeded', credit:'#2f7d5b', debit:'#d52d2d', stripe:'#faf6f6' },
+      minimal: { bg:'#faf8f8', panel:'#ffffff', border:'#eae5e5', rowBorder:'#f3efef', text:'#2a2020', muted:'#999999', headerBg:'#f5f1f1', headerText:'#5a0000', headerBrand:'#5a0000', accent:'#ad0505', focus:'#fbeded', credit:'#2f7d5b', debit:'#d52d2d', stripe:'#f7f3f3' },
+      escuro: { bg:'#1a1414', panel:'#241c1c', border:'#3a2c2c', rowBorder:'#2e2323', text:'#f0e8e8', muted:'#a79999', headerBg:'#5a0000', headerText:'#ffffff', headerBrand:'#f0e8e8', accent:'#d52d2d', focus:'#3a2020', credit:'#4bbf85', debit:'#e0736b', stripe:'#201818' }
+    };
+    const th = themes[t] || themes.classico;
+    if (this.props.corDestaque) th.accent = this.props.corDestaque;
+    return th;
+  }
+
+  renderVals() {
+    const th = this.theme();
+    const cfg = this.state.cfg;
+    const empresa = this.props.empresa || 'SIPLAN';
+    const funcionario = cfg.nome || this.props.funcionario || 'José Eduardo Pieretti';
+    const cargaPadrao = this.jornada();
+    const locked = !!cfg.encerrado;
+    const key = this.state.monthKey;
+    const raw = this.state.data[key] || this.genMonth(key);
+    const [y, mo] = key.split('-').map(Number);
+    const view = this.state.view;
+
+    let sumWorked = 0, sumCarga = 0, sumExtras = 0, sumDebit = 0, saldo = 0, daysDone = 0, maxV = this.parse(cargaPadrao) || 480;
+
+    const computed = raw.map(r => this.compute(r));
+    computed.forEach(c => {
+      if (c.have) {
+        sumWorked += c.worked; sumCarga += (c.carga ?? 0);
+        if (c.diff > 0) sumExtras += c.diff; else sumDebit += -c.diff;
+        saldo += c.diff; daysDone++;
+        if (c.worked > maxV) maxV = c.worked;
+      }
+    });
+
+    const rows = raw.map((r, idx) => {
+      const c = computed[idx];
+      let horasTrab = '', extras = '', bh = '', extrasColor = th.muted, bhColor = th.muted;
+      if (c.have) {
+        horasTrab = this.fmt(c.worked);
+        extras = c.diff > 0 ? this.fmt(c.diff) : '0:00';
+        bh = c.diff < 0 ? this.fmt(-c.diff) : '0:00';
+        extrasColor = c.diff > 0 ? th.credit : th.muted;
+        bhColor = c.diff < 0 ? th.debit : th.muted;
+      }
+      return {
+        data: r.data, carga: r.carga, entrada: r.entrada, saidaAlmoco: r.saidaAlmoco,
+        voltaAlmoco: r.voltaAlmoco, saida: r.saida,
+        horasTrab, extras, bh, extrasColor, bhColor,
+        rowBg: idx % 2 ? 'transparent' : th.stripe,
+        onCarga: (e) => this.update(idx, 'carga', e.target.value),
+        onEntrada: (e) => this.update(idx, 'entrada', e.target.value),
+        onSaidaAlmoco: (e) => this.update(idx, 'saidaAlmoco', e.target.value),
+        onVoltaAlmoco: (e) => this.update(idx, 'voltaAlmoco', e.target.value),
+        onSaida: (e) => this.update(idx, 'saida', e.target.value)
+      };
+    });
+
+    // chart
+    const chart = raw.map((r, idx) => {
+      const c = computed[idx];
+      const w = c.have ? c.worked : 0;
+      const meta = c.have ? (c.carga ?? this.parse(cargaPadrao)) : this.parse(cargaPadrao);
+      let color = th.border;
+      if (c.have) color = c.diff >= 0 ? th.accent : th.debit;
+      return { h: Math.round((w / maxV) * 100) + '%', color, title: r.data + '  •  ' + (c.have ? this.fmt(w) : '—') };
+    });
+
+    // navigation
+    const mkNav = (id, label) => {
+      const active = view === id;
+      const style = active
+        ? 'background:' + th.accent + ';color:#fff;'
+        : 'background:transparent;color:' + th.text + ';';
+      return { label, icon: { __html: this.ICONS[id] }, active, style, onClick: () => this.setState({ view: id }) };
+    };
+    const navItems = [ mkNav('painel','Painel'), mkNav('registrar','Registrar Ponto'), mkNav('espelho','Espelho do Mês'), mkNav('config','Configurações') ];
+
+    // tema segmented
+    const temaOpts = [ ['sistema','Sistema'], ['claro','Claro'], ['escuro','Escuro'] ].map(([k, label]) => {
+      const active = (cfg.tema || 'claro') === k;
+      return {
+        label, active,
+        style: active ? 'background:' + th.accent + ';color:#fff;border-color:' + th.accent + ';'
+                      : 'background:transparent;color:' + th.muted + ';border-color:' + th.border + ';',
+        onClick: () => this.setCfg('tema', k)
+      };
+    });
+
+    // selected day (register)
+    const si = Math.min(this.state.selectedDay, raw.length - 1);
+    const srow = raw[si] || { carga: cargaPadrao, entrada:'', saidaAlmoco:'', voltaAlmoco:'', saida:'', data:'' };
+    const sc = this.compute(srow);
+    let statusText = 'Não registrado', statusColor = th.muted, statusBg = th.stripe;
+    if (sc.filled === 4) { statusText = 'Completo'; statusColor = th.credit; statusBg = th.focus; }
+    else if (sc.filled > 0) { statusText = 'Incompleto'; statusColor = th.accent; statusBg = th.focus; }
+
+    const sel = {
+      label: srow.data || '—',
+      carga: srow.carga, onCarga: (e) => this.updateSel('carga', e.target.value),
+      horasTrab: sc.have ? this.fmt(sc.worked) : '—',
+      extras: sc.have && sc.diff > 0 ? this.fmt(sc.diff) : '0:00',
+      bh: sc.have && sc.diff < 0 ? this.fmt(-sc.diff) : '0:00',
+      statusText, statusColor, statusBg
+    };
+    const punches = [
+      { label:'Entrada', value: srow.entrada, onChange:(e)=>this.updateSel('entrada',e.target.value), onNow:()=>this.setNow('entrada') },
+      { label:'Saída Almoço', value: srow.saidaAlmoco, onChange:(e)=>this.updateSel('saidaAlmoco',e.target.value), onNow:()=>this.setNow('saidaAlmoco') },
+      { label:'Volta Almoço', value: srow.voltaAlmoco, onChange:(e)=>this.updateSel('voltaAlmoco',e.target.value), onNow:()=>this.setNow('voltaAlmoco') },
+      { label:'Saída', value: srow.saida, onChange:(e)=>this.updateSel('saida',e.target.value), onNow:()=>this.setNow('saida') }
+    ];
+
+    const kpis = [
+      { label:'Horas trabalhadas', value:this.fmt(sumWorked), color:th.text, accent:th.accent, sub: this.fmt(sumCarga) + ' de carga' },
+      { label:'Horas extras', value:this.fmt(sumExtras), color:th.credit, accent:th.credit, sub: daysDone + ' dias registrados' },
+      { label:'Atraso / Falta', value:this.fmt(sumDebit), color:th.debit, accent:th.debit, sub: 'a compensar' },
+      { label:'Saldo', value:(saldo>=0?'+':'')+this.fmt(saldo), color: saldo>0?th.credit:(saldo<0?th.debit:th.text), accent: saldo<0?th.debit:th.credit, sub:'banco de horas' }
+    ];
+
+    const titles = { painel:['Visão geral','Painel'], registrar:['Marcação','Registrar Ponto'], espelho:['Folha de ponto','Espelho do Mês'], config:['Ajustes','Configurações'] };
+
+    return {
+      rootStyle: {
+        '--bg': th.bg, '--panel': th.panel, '--border': th.border, '--rowBorder': th.rowBorder,
+        '--text': th.text, '--muted': th.muted, '--headerBg': th.headerBg, '--headerText': th.headerText,
+        '--headerBrand': th.headerBrand, '--accent': th.accent, '--focus': th.focus,
+        '--credit': th.credit, '--debit': th.debit, '--stripe': th.stripe,
+        display: 'flex', minHeight: '100vh', background: th.bg, color: th.text,
+        fontFamily: "'Lato', system-ui, sans-serif"
+      },
+      empresa, funcionario, cargaPadrao, locked,
+      initials: (empresa || 'S').trim().slice(0,2).toUpperCase(),
+      monthLabel: this.MESES[mo - 1] + ' ' + y,
+      viewKicker: titles[view][0], viewTitle: titles[view][1],
+      isPainel: view === 'painel', isRegistrar: view === 'registrar', isEspelho: view === 'espelho', isConfig: view === 'config',
+      periodoNome: cfg.periodoNome, periodoInicio: cfg.periodoInicio, periodoFim: cfg.periodoFim,
+      periodoChip: cfg.periodoNome || 'Sem período definido',
+      encerrado: locked,
+      statusPeriodoText: locked ? 'Encerrado' : 'Aberto',
+      statusPeriodoColor: locked ? th.debit : th.credit,
+      statusPeriodoBg: locked ? th.focus : th.stripe,
+      btnPeriodoLabel: locked ? 'Reabrir período' : 'Encerrar período',
+      periodoBtnStyle: locked
+        ? 'background:' + th.credit + ';color:#fff;border:1.5px solid ' + th.credit + ';'
+        : 'background:transparent;color:' + th.debit + ';border:1.5px solid ' + th.debit + ';',
+      cfgNome: cfg.nome, cfgJornada: cfg.jornada, temaOpts,
+      onNome: (e) => this.setCfg('nome', e.target.value),
+      onJornada: (e) => this.setCfg('jornada', this.mask(e.target.value)),
+      onPeriodoNome: (e) => this.setCfg('periodoNome', e.target.value),
+      onInicio: (e) => this.setCfg('periodoInicio', e.target.value),
+      onFim: (e) => this.setCfg('periodoFim', e.target.value),
+      togglePeriodo: () => this.toggleEncerrado(),
+      navItems, rows, chart,
+      chartFirst: raw.length ? raw[0].data.slice(0,5) : '', chartLast: raw.length ? raw[raw.length-1].data.slice(0,5) : '',
+      kpis, sel, punches,
+      totalTrab: this.fmt(sumWorked), totalCarga: this.fmt(sumCarga),
+      totalExtras: this.fmt(sumExtras), totalDebit: this.fmt(sumDebit),
+      saldoTxt: (saldo >= 0 ? '+' : '') + this.fmt(saldo),
+      saldoColor: saldo > 0 ? th.credit : (saldo < 0 ? th.debit : th.muted),
+      saldoNote: saldo >= 0 ? 'horas a favor no período' : 'horas devidas no período',
+      prevMonth: () => this.changeMonth(-1), nextMonth: () => this.changeMonth(1),
+      prevDay: () => this.changeDay(-1), nextDay: () => this.changeDay(1), goToday: () => this.goToday(),
+      clearMonth: () => this.clearMonth(), doPrint: () => window.print()
+    };
+  }
+}
+</script>
+</body>
+</html>
