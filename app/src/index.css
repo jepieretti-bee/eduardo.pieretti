@@ -1,0 +1,13 @@
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; height: 100%; }
+body { font-family: 'Lato', system-ui, sans-serif; background: #f2efef; }
+a { color: #ad0505; text-decoration: none; }
+a:hover { color: #7f0101; }
+::selection { background: #f3cfcf; }
+
+input, button { font: inherit; }
+button:disabled, input:disabled { cursor: not-allowed; opacity: .65; }
+
+@media print {
+  .no-print { display: none !important; }
+}

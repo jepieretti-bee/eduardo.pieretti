@@ -1,0 +1,209 @@
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { api } from './lib/api';
+import { resolveTheme, cssVars } from './lib/theme';
+import { businessDaysOfMonth, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
+import { maskHora } from './lib/time';
+import { isLocked } from './lib/periodos';
+
+import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
+import Painel from './views/Painel';
+import Registrar from './views/Registrar';
+import Espelho from './views/Espelho';
+import Configuracoes from './views/Configuracoes';
+
+const today = new Date();
+const TODAY_ISO = today.toISOString().slice(0, 10);
+
+export default function App() {
+  const [ready, setReady] = useState(false);
+  const [config, setConfig] = useState(null);
+  const [periodos, setPeriodos] = useState([]);
+  const [view, setView] = useState('painel');
+  const [monthKey, setMonthKey] = useState(monthKeyOf(today));
+  const [selectedIso, setSelectedIso] = useState(TODAY_ISO);
+  const [diasMap, setDiasMap] = useState({});
+
+  // Carga inicial: configuração e períodos.
+  useEffect(() => {
+    (async () => {
+      const [cfg, per] = await Promise.all([api.getConfig(), api.listPeriodos()]);
+      setConfig(cfg);
+      setPeriodos(per);
+      setReady(true);
+    })();
+  }, []);
+
+  // Carrega lançamentos do mês exibido sempre que o mês mudar.
+  const loadMonth = useCallback(async (key) => {
+    const { start, end } = monthRange(key);
+    const rows = await api.listDias(start, end);
+    setDiasMap((prev) => {
+      const next = { ...prev };
+      rows.forEach((r) => { next[r.data] = r; });
+      return next;
+    });
+  }, []);
+
+  useEffect(() => { if (ready) loadMonth(monthKey); }, [ready, monthKey, loadMonth]);
+
+  // Tema: recalcula quando preferência do SO muda (modo "Sistema").
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!config || config.tema !== 'sistema') return undefined;
+    let mq;
+    try {
+      mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => forceTick((n) => n + 1);
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
+    } catch { return undefined; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só recalcular quando o modo de tema mudar
+  }, [config?.tema]);
+
+  const th = useMemo(() => resolveTheme(config?.tema), [config?.tema]);
+
+  if (!ready || !config) {
+    return <div style={{ padding: 40, fontFamily: 'Lato, sans-serif', color: '#999' }}>Carregando…</div>;
+  }
+
+  const cargaPadrao = config.cargaPadrao || '08:00';
+  const funcionario = config.funcionario || 'Colaborador';
+
+  function rowFor(iso, day, label) {
+    const stored = diasMap[iso];
+    return {
+      iso, day, label,
+      carga: stored?.carga ?? cargaPadrao,
+      entrada: stored?.entrada ?? '',
+      saidaAlmoco: stored?.saidaAlmoco ?? '',
+      voltaAlmoco: stored?.voltaAlmoco ?? '',
+      saida: stored?.saida ?? ''
+    };
+  }
+
+  const rawRows = businessDaysOfMonth(monthKey).map((d) => rowFor(d.iso, d.day, d.label));
+
+  async function updateDia(iso, field, val) {
+    const current = diasMap[iso] || {
+      carga: cargaPadrao, entrada: '', saidaAlmoco: '', voltaAlmoco: '', saida: ''
+    };
+    const next = { ...current, [field]: maskHora(val) };
+    setDiasMap((prev) => ({ ...prev, [iso]: next }));
+    await api.putDia(iso, next);
+  }
+
+  async function saveConfig(patch) {
+    const cfg = await api.putConfig(patch);
+    setConfig(cfg);
+  }
+
+  async function clearMonth() {
+    const { start, end } = monthRange(monthKey);
+    await api.clearDias(start, end);
+    setDiasMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((iso) => { if (iso >= start && iso <= end) delete next[iso]; });
+      return next;
+    });
+  }
+
+  function changeMonth(delta) {
+    setMonthKey((k) => shiftMonthKey(k, delta));
+  }
+
+  function goToday() {
+    setMonthKey(monthKeyOf(today));
+    setSelectedIso(TODAY_ISO);
+  }
+
+  function changeDay(delta) {
+    const idx = rawRows.findIndex((r) => r.iso === selectedIso);
+    let next = (idx < 0 ? 0 : idx) + delta;
+    if (next < 0) next = 0;
+    if (next > rawRows.length - 1) next = rawRows.length - 1;
+    if (rawRows[next]) setSelectedIso(rawRows[next].iso);
+  }
+
+  // Períodos CRUD
+  async function createPeriodo(p) {
+    const created = await api.createPeriodo(p);
+    setPeriodos((prev) => [...prev, created]);
+  }
+  async function updatePeriodo(id, p) {
+    const updated = await api.updatePeriodo(id, p);
+    setPeriodos((prev) => prev.map((x) => (x.id === id ? updated : x)));
+  }
+  async function togglePeriodo(id) {
+    const updated = await api.togglePeriodo(id);
+    setPeriodos((prev) => prev.map((x) => (x.id === id ? updated : x)));
+  }
+  async function deletePeriodo(id) {
+    await api.deletePeriodo(id);
+    setPeriodos((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  return (
+    <div
+      style={{
+        ...cssVars(th),
+        display: 'flex', minHeight: '100vh', background: th.bg, color: th.text,
+        fontFamily: "'Lato', system-ui, sans-serif"
+      }}
+    >
+      <Sidebar th={th} view={view} setView={setView} funcionario={funcionario} cargaPadrao={cargaPadrao} />
+
+      <main style={{ flex: 1, minWidth: 0, padding: '26px 34px 44px' }}>
+        <TopBar
+          th={th}
+          view={view}
+          monthLabel={monthLabel(monthKey)}
+          onPrevMonth={() => changeMonth(-1)}
+          onNextMonth={() => changeMonth(1)}
+        />
+
+        {view === 'painel' && (
+          <Painel th={th} rows={rawRows} cargaPadrao={cargaPadrao} />
+        )}
+
+        {view === 'registrar' && (
+          <Registrar
+            th={th}
+            rows={rawRows}
+            selectedIso={selectedIso}
+            onPrevDay={() => changeDay(-1)}
+            onNextDay={() => changeDay(1)}
+            onToday={goToday}
+            updateDia={updateDia}
+            locked={isLocked(periodos, selectedIso)}
+          />
+        )}
+
+        {view === 'espelho' && (
+          <Espelho
+            th={th}
+            rows={rawRows}
+            cargaPadrao={cargaPadrao}
+            updateDia={updateDia}
+            isLocked={(iso) => isLocked(periodos, iso)}
+            anyLocked={rawRows.some((r) => isLocked(periodos, r.iso))}
+            clearMonth={clearMonth}
+          />
+        )}
+
+        {view === 'config' && (
+          <Configuracoes
+            th={th}
+            config={config}
+            saveConfig={saveConfig}
+            periodos={periodos}
+            createPeriodo={createPeriodo}
+            updatePeriodo={updatePeriodo}
+            togglePeriodo={togglePeriodo}
+            deletePeriodo={deletePeriodo}
+          />
+        )}
+      </main>
+    </div>
+  );
+}

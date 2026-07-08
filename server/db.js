@@ -1,0 +1,45 @@
+import Database from 'better-sqlite3';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const db = new Database(path.join(__dirname, 'ponto.db'));
+
+db.pragma('journal_mode = WAL');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS config (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    empresa TEXT NOT NULL DEFAULT 'SIPLAN',
+    funcionario TEXT NOT NULL DEFAULT '',
+    cargaPadrao TEXT NOT NULL DEFAULT '08:00',
+    tema TEXT NOT NULL DEFAULT 'claro'
+  );
+
+  CREATE TABLE IF NOT EXISTS periodos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL DEFAULT '',
+    dataInicio TEXT NOT NULL,
+    dataFim TEXT NOT NULL,
+    encerrado INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS dias (
+    data TEXT PRIMARY KEY,
+    carga TEXT,
+    entrada TEXT,
+    saidaAlmoco TEXT,
+    voltaAlmoco TEXT,
+    saida TEXT
+  );
+`);
+
+const configExists = db.prepare('SELECT id FROM config WHERE id = 1').get();
+if (!configExists) {
+  db.prepare(
+    `INSERT INTO config (id, empresa, funcionario, cargaPadrao, tema) VALUES (1, 'SIPLAN', 'José Eduardo Pieretti', '08:00', 'claro')`
+  ).run();
+}
+
+export default db;
