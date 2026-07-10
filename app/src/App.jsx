@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { api } from './lib/api';
 import { resolveTheme, cssVars } from './lib/theme';
-import { businessDaysOfMonth, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
-import { maskHora } from './lib/time';
-import { isLocked } from './lib/periodos';
+import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
+import { maskHora, compute, fmtMinutos } from './lib/time';
+import { isLocked, periodoForRange } from './lib/periodos';
 
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -47,6 +47,28 @@ export default function App() {
 
   useEffect(() => { if (ready) loadMonth(monthKey); }, [ready, monthKey, loadMonth]);
 
+  // Período que cobre o mês em exibição (por sobreposição de intervalo — o período
+  // não precisa começar no dia 1º). O saldo do banco de horas acumula dentro dele.
+  const periodoAtual = useMemo(() => {
+    const { start, end } = monthRange(monthKey);
+    return periodoForRange(periodos, start, end);
+  }, [periodos, monthKey]);
+
+  // Carrega todos os lançamentos do período ativo (pode abranger vários meses),
+  // para o saldo do banco de horas acumular corretamente, zerando só noutro período.
+  const loadRange = useCallback(async (start, end) => {
+    const rows = await api.listDias(start, end);
+    setDiasMap((prev) => {
+      const next = { ...prev };
+      rows.forEach((r) => { next[r.data] = r; });
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (ready && periodoAtual) loadRange(periodoAtual.dataInicio, periodoAtual.dataFim);
+  }, [ready, periodoAtual, loadRange]);
+
   // Tema: recalcula quando preferência do SO muda (modo "Sistema").
   const [, forceTick] = useState(0);
   useEffect(() => {
@@ -83,6 +105,25 @@ export default function App() {
   }
 
   const rawRows = businessDaysOfMonth(monthKey).map((d) => rowFor(d.iso, d.day, d.label));
+
+  // Saldo do banco de horas: acumulado nos dias do período ativo (não só no mês em
+  // exibição), zerando apenas quando o período em questão muda. Sem período cadastrado
+  // cobrindo o mês, cai de volta ao saldo do próprio mês (comportamento anterior).
+  const periodoRows = periodoAtual
+    ? businessDaysInRange(periodoAtual.dataInicio, periodoAtual.dataFim).map((d) => rowFor(d.iso, d.day, d.label))
+    : rawRows;
+  const saldoPeriodo = periodoRows.reduce((acc, r) => {
+    const c = compute(r, cargaPadrao);
+    return acc + (c.have ? c.diff : 0);
+  }, 0);
+  const saldoPeriodoInfo = {
+    saldo: saldoPeriodo,
+    saldoTxt: (saldoPeriodo >= 0 ? '+' : '') + fmtMinutos(saldoPeriodo),
+    saldoColor: saldoPeriodo > 0 ? th.credit : saldoPeriodo < 0 ? th.debit : th.muted,
+    saldoNote: periodoAtual
+      ? `acumulado em ${periodoAtual.nome || 'período'} (${periodoAtual.dataInicio.split('-').reverse().join('/')} – ${periodoAtual.dataFim.split('-').reverse().join('/')})`
+      : (saldoPeriodo >= 0 ? 'horas a favor no mês' : 'horas devidas no mês')
+  };
 
   async function updateDia(iso, field, val) {
     const current = diasMap[iso] || {
@@ -163,7 +204,7 @@ export default function App() {
         />
 
         {view === 'painel' && (
-          <Painel th={th} rows={rawRows} cargaPadrao={cargaPadrao} />
+          <Painel th={th} rows={rawRows} cargaPadrao={cargaPadrao} saldoPeriodo={saldoPeriodoInfo} />
         )}
 
         {view === 'registrar' && (
@@ -188,6 +229,7 @@ export default function App() {
             isLocked={(iso) => isLocked(periodos, iso)}
             anyLocked={rawRows.some((r) => isLocked(periodos, r.iso))}
             clearMonth={clearMonth}
+            saldoPeriodo={saldoPeriodoInfo}
           />
         )}
 

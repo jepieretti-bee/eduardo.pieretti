@@ -1,16 +1,15 @@
 import { compute, fmtMinutos, parseHora } from '../lib/time';
 
-export default function Painel({ th, rows, cargaPadrao }) {
+export default function Painel({ th, rows, cargaPadrao, saldoPeriodo }) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
 
-  let sumWorked = 0, sumCarga = 0, sumExtras = 0, sumDebit = 0, saldo = 0, daysDone = 0;
+  let sumWorked = 0, sumCarga = 0, sumExtras = 0, sumDebit = 0, daysDone = 0;
   let maxV = parseHora(cargaPadrao) || 480;
   computed.forEach((c) => {
     if (c.have) {
       sumWorked += c.worked;
       sumCarga += c.carga ?? 0;
       if (c.diff > 0) sumExtras += c.diff; else sumDebit += -c.diff;
-      saldo += c.diff;
       daysDone++;
       if (c.worked > maxV) maxV = c.worked;
     }
@@ -20,7 +19,7 @@ export default function Painel({ th, rows, cargaPadrao }) {
     { label: 'Horas trabalhadas', value: fmtMinutos(sumWorked), color: th.text, accent: th.accent, sub: fmtMinutos(sumCarga) + ' de carga' },
     { label: 'Horas extras', value: fmtMinutos(sumExtras), color: th.credit, accent: th.credit, sub: daysDone + ' dias registrados' },
     { label: 'Atraso / Falta', value: fmtMinutos(sumDebit), color: th.debit, accent: th.debit, sub: 'a compensar' },
-    { label: 'Saldo', value: (saldo >= 0 ? '+' : '') + fmtMinutos(saldo), color: saldo > 0 ? th.credit : saldo < 0 ? th.debit : th.text, accent: saldo < 0 ? th.debit : th.credit, sub: 'banco de horas' }
+    { label: 'Saldo', value: saldoPeriodo.saldoTxt, color: saldoPeriodo.saldoColor, accent: saldoPeriodo.saldo < 0 ? th.debit : th.credit, sub: 'banco de horas' }
   ];
 
   const chart = rows.map((r, idx) => {
@@ -30,10 +29,6 @@ export default function Painel({ th, rows, cargaPadrao }) {
     if (c.have) color = c.diff >= 0 ? th.accent : th.debit;
     return { h: Math.round((w / maxV) * 100) + '%', color, title: r.label + '  •  ' + (c.have ? fmtMinutos(w) : '—') };
   });
-
-  const saldoTxt = (saldo >= 0 ? '+' : '') + fmtMinutos(saldo);
-  const saldoColor = saldo > 0 ? th.credit : saldo < 0 ? th.debit : th.muted;
-  const saldoNote = saldo >= 0 ? 'horas a favor no período' : 'horas devidas no período';
 
   const card = { background: th.panel, border: `1px solid ${th.border}`, borderRadius: 14 };
 
@@ -83,8 +78,8 @@ export default function Painel({ th, rows, cargaPadrao }) {
           </div>
           <div style={{ marginTop: 'auto', paddingTop: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: th.muted }}>Saldo do banco de horas</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 40, fontWeight: 600, lineHeight: 1.1, color: saldoColor }}>{saldoTxt}</div>
-            <div style={{ fontSize: 12, color: th.muted, marginTop: 2 }}>{saldoNote}</div>
+            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 40, fontWeight: 600, lineHeight: 1.1, color: saldoPeriodo.saldoColor }}>{saldoPeriodo.saldoTxt}</div>
+            <div style={{ fontSize: 12, color: th.muted, marginTop: 2 }}>{saldoPeriodo.saldoNote}</div>
           </div>
         </div>
       </div>

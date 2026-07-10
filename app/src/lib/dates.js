@@ -37,6 +37,23 @@ export function businessDaysOfMonth(monthKey) {
   return out;
 }
 
+// Dias úteis (seg-sex) entre duas datas ISO (inclusive), podendo cruzar meses/anos.
+export function businessDaysInRange(startIso, endIso) {
+  const [sy, smo, sd] = startIso.split('-').map(Number);
+  const [ey, emo, ed] = endIso.split('-').map(Number);
+  const start = new Date(sy, smo - 1, sd);
+  const end = new Date(ey, emo - 1, ed);
+  const out = [];
+  for (let dt = start; dt <= end; dt = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + 1)) {
+    const wd = dt.getDay();
+    if (wd >= 1 && wd <= 5) {
+      const y = dt.getFullYear(), mo = dt.getMonth() + 1, d = dt.getDate();
+      out.push({ iso: isoOf(y, mo, d), day: d, label: dayLabel(y, mo, d) });
+    }
+  }
+  return out;
+}
+
 export function shiftMonthKey(monthKey, delta) {
   let [y, mo] = monthKey.split('-').map(Number);
   mo += delta;

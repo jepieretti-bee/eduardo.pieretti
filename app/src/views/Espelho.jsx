@@ -1,19 +1,16 @@
 import { compute, fmtMinutos } from '../lib/time';
 import { IconLock } from '../components/Icons';
 
-export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, anyLocked, clearMonth }) {
+export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, anyLocked, clearMonth, saldoPeriodo }) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
 
-  let sumWorked = 0, sumExtras = 0, saldo = 0;
+  let sumWorked = 0, sumExtras = 0;
   computed.forEach((c) => {
     if (c.have) {
       sumWorked += c.worked;
       if (c.diff > 0) sumExtras += c.diff;
-      saldo += c.diff;
     }
   });
-  const saldoTxt = (saldo >= 0 ? '+' : '') + fmtMinutos(saldo);
-  const saldoColor = saldo > 0 ? th.credit : saldo < 0 ? th.debit : th.muted;
 
   const cellInput = (locked) => ({
     width: '100%', border: 'none', background: 'transparent', textAlign: 'center', padding: '11px 4px',
@@ -98,7 +95,7 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, an
               <td style={{ padding: '13px 16px', fontFamily: "'Oswald',sans-serif", textTransform: 'uppercase', letterSpacing: '.5px' }} colSpan={6}>Resultado do mês</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmtMinutos(sumWorked)}</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: th.credit }}>{fmtMinutos(sumExtras)}</td>
-              <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: saldoColor }}>{saldoTxt}</td>
+              <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: saldoPeriodo.saldoColor }} title={saldoPeriodo.saldoNote}>{saldoPeriodo.saldoTxt}</td>
             </tr>
           </tfoot>
         </table>
