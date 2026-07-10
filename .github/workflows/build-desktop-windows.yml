@@ -1,0 +1,38 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependências do backend
+        working-directory: server
+        run: npm install
+
+      - name: Instalar dependências do frontend
+        working-directory: app
+        run: npm install
+
+      - name: Instalar dependências do desktop
+        working-directory: desktop
+        run: npm install
+
+      - name: Gerar instalador Windows
+        working-directory: desktop
+        run: npm run dist:win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: controle-de-ponto-instalador-windows
+          path: desktop/release/*.exe

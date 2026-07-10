@@ -1,4 +1,6 @@
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+// Em produção/desktop o frontend é servido pelo próprio backend (mesma origem).
+// Em dev (`vite`), aponta para o servidor separado via VITE_API_URL (ver .env.development).
+const BASE = import.meta.env.VITE_API_URL || '';
 
 async function request(path, options) {
   const res = await fetch(BASE + path, {

@@ -1,0 +1,60 @@
+{
+  "name": "controle-de-ponto-desktop",
+  "version": "1.0.0",
+  "description": "Controle de Ponto Siplan — app desktop",
+  "main": "main.js",
+  "author": "Siplan",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "make-icon": "node scripts/make-icon.js",
+    "prepare:assets": "node scripts/prepare-assets.js",
+    "start": "npm run prepare:assets && electron .",
+    "dist:win": "npm run prepare:assets && electron-builder --win nsis",
+    "dist:win:portable": "npm run prepare:assets && electron-builder --win portable"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "png-to-ico": "^3.0.2",
+    "pureimage": "^0.4.18"
+  },
+  "build": {
+    "appId": "br.com.siplan.controledeponto",
+    "productName": "Controle de Ponto Siplan",
+    "files": [
+      "main.js",
+      "server-src/**/*",
+      "!server-src/**/*.map"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Controle de Ponto Siplan"
+    },
+    "asar": true
+  }
+}

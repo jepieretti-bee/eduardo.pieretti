@@ -1,6 +1,6 @@
 # Controle de Ponto — Backend
 
-API REST simples (Express + SQLite/better-sqlite3) que guarda configuração do colaborador, períodos e lançamentos de ponto para o app em `../app`.
+API REST simples (Express + `node:sqlite`, o SQLite embutido no próprio Node — sem módulo nativo para compilar) que guarda configuração do colaborador, períodos e lançamentos de ponto para o app em `../app`. É a mesma base usada pelo app desktop em `../desktop`.
 
 ## Rodando
 
