@@ -8,12 +8,15 @@ const PUNCH_FIELDS = [
   { field: 'saida', label: 'Saída' }
 ];
 
-export default function Registrar({ th, rows, selectedIso, onPrevDay, onNextDay, onToday, updateDia, locked }) {
+export default function Registrar({ th, rows, selectedIso, onPrevDay, onNextDay, onToday, updateDia, toggleFalta, locked }) {
   const srow = rows.find((r) => r.iso === selectedIso) || rows[0];
   const sc = srow ? compute(srow) : { have: false, worked: 0, diff: 0, filled: 0 };
+  const punchesDisabled = locked || sc.falta;
 
   let statusText = 'Não registrado', statusColor = th.muted, statusBg = th.stripe;
-  if (sc.filled === 4) { statusText = 'Completo'; statusColor = th.credit; statusBg = th.focus; }
+  if (srow?.isFeriado) { statusText = 'Feriado' + (srow.feriadoNome ? ' — ' + srow.feriadoNome : ''); statusColor = th.muted; statusBg = th.stripe; }
+  else if (sc.falta) { statusText = 'Falta'; statusColor = th.debit; statusBg = th.focus; }
+  else if (sc.filled === 4) { statusText = 'Completo'; statusColor = th.credit; statusBg = th.focus; }
   else if (sc.filled > 0) { statusText = 'Incompleto'; statusColor = th.accent; statusBg = th.focus; }
 
   function setNow(field) {
@@ -51,6 +54,19 @@ export default function Registrar({ th, rows, selectedIso, onPrevDay, onNextDay,
         <button onClick={onToday} style={{ cursor: 'pointer', background: th.panel, border: `1px solid ${th.border}`, color: th.muted, borderRadius: 9, padding: '9px 15px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>
           Hoje
         </button>
+        <button
+          onClick={() => toggleFalta(srow.iso)}
+          disabled={locked || srow.isFeriado}
+          style={{
+            cursor: locked || srow.isFeriado ? 'not-allowed' : 'pointer',
+            background: sc.falta ? th.debit : 'transparent',
+            border: `1px solid ${sc.falta ? th.debit : th.border}`,
+            color: sc.falta ? '#fff' : th.debit,
+            borderRadius: 9, padding: '9px 15px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit'
+          }}
+        >
+          {sc.falta ? 'Remover falta' : 'Marcar falta'}
+        </button>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 20, background: statusBg, color: statusColor, fontSize: '12.5px', fontWeight: 700 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor }} />
           {statusText}
@@ -65,10 +81,10 @@ export default function Registrar({ th, rows, selectedIso, onPrevDay, onNextDay,
               type="text" inputMode="numeric" maxLength={5} placeholder="--:--"
               value={srow[p.field]}
               onChange={(e) => updateDia(srow.iso, p.field, e.target.value)}
-              disabled={locked}
+              disabled={punchesDisabled}
               style={inputStyle}
             />
-            <button onClick={() => setNow(p.field)} disabled={locked} style={{ cursor: 'pointer', background: 'transparent', border: `1px solid ${th.border}`, color: th.accent, borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', width: '100%', transition: '.12s' }}>
+            <button onClick={() => setNow(p.field)} disabled={punchesDisabled} style={{ cursor: 'pointer', background: 'transparent', border: `1px solid ${th.border}`, color: th.accent, borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', width: '100%', transition: '.12s' }}>
               Agora
             </button>
           </div>
@@ -81,7 +97,7 @@ export default function Registrar({ th, rows, selectedIso, onPrevDay, onNextDay,
           <input
             value={srow.carga}
             onChange={(e) => updateDia(srow.iso, 'carga', e.target.value)}
-            disabled={locked}
+            disabled={locked || srow.isFeriado}
             placeholder="08:00"
             style={{ width: '100%', fontFamily: "'IBM Plex Mono',monospace", fontSize: 20, fontWeight: 600, color: th.text, border: 'none', borderBottom: `1.5px solid ${th.border}`, padding: '2px 0', background: 'transparent', outline: 'none' }}
           />

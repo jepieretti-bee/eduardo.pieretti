@@ -21,13 +21,19 @@ export function maskHora(v) {
   return d.slice(0, 2) + ':' + d.slice(2);
 }
 
-// r: { carga, entrada, saidaAlmoco, voltaAlmoco, saida }, jornadaPadrao: "HH:MM"
+// r: { carga, entrada, saidaAlmoco, voltaAlmoco, saida, falta }, jornadaPadrao: "HH:MM"
 export function compute(r, jornadaPadrao) {
+  const carga = parseHora(r.carga) ?? parseHora(jornadaPadrao);
+
+  // Falta: dia inteiro conta como débito (carga negativa), independente de marcações.
+  if (r.falta) {
+    return { have: true, worked: 0, diff: -(carga ?? 0), carga, filled: 0, falta: true };
+  }
+
   const e = parseHora(r.entrada);
   const sa = parseHora(r.saidaAlmoco);
   const va = parseHora(r.voltaAlmoco);
   const s = parseHora(r.saida);
-  const carga = parseHora(r.carga) ?? parseHora(jornadaPadrao);
   let worked = 0;
   let have = false;
   let filled = 0;

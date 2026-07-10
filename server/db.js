@@ -32,9 +32,22 @@ db.exec(`
     entrada TEXT,
     saidaAlmoco TEXT,
     voltaAlmoco TEXT,
-    saida TEXT
+    saida TEXT,
+    falta INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS feriados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    data TEXT NOT NULL UNIQUE,
+    nome TEXT NOT NULL DEFAULT ''
   );
 `);
+
+// Migração: bancos criados antes do campo "falta" existir.
+const diasCols = db.prepare("PRAGMA table_info(dias)").all().map((c) => c.name);
+if (!diasCols.includes('falta')) {
+  db.exec('ALTER TABLE dias ADD COLUMN falta INTEGER NOT NULL DEFAULT 0');
+}
 
 const configExists = db.prepare('SELECT id FROM config WHERE id = 1').get();
 if (!configExists) {

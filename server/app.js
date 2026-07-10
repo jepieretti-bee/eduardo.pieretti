@@ -94,36 +94,62 @@ app.get('/api/dias', (req, res) => {
   } else {
     rows = db.prepare('SELECT * FROM dias ORDER BY data ASC').all();
   }
-  res.json(rows);
+  res.json(rows.map((r) => ({ ...r, falta: !!r.falta })));
 });
 
 app.put('/api/dias/:data', (req, res) => {
   const { data } = req.params;
-  const { carga, entrada, saidaAlmoco, voltaAlmoco, saida } = req.body;
+  const { carga, entrada, saidaAlmoco, voltaAlmoco, saida, falta } = req.body;
   db.prepare(
-    `INSERT INTO dias (data, carga, entrada, saidaAlmoco, voltaAlmoco, saida)
-     VALUES (@data, @carga, @entrada, @saidaAlmoco, @voltaAlmoco, @saida)
+    `INSERT INTO dias (data, carga, entrada, saidaAlmoco, voltaAlmoco, saida, falta)
+     VALUES (@data, @carga, @entrada, @saidaAlmoco, @voltaAlmoco, @saida, @falta)
      ON CONFLICT(data) DO UPDATE SET
        carga = excluded.carga,
        entrada = excluded.entrada,
        saidaAlmoco = excluded.saidaAlmoco,
        voltaAlmoco = excluded.voltaAlmoco,
-       saida = excluded.saida`
+       saida = excluded.saida,
+       falta = excluded.falta`
   ).run({
     data,
     carga: carga ?? null,
     entrada: entrada ?? '',
     saidaAlmoco: saidaAlmoco ?? '',
     voltaAlmoco: voltaAlmoco ?? '',
-    saida: saida ?? ''
+    saida: saida ?? '',
+    falta: falta ? 1 : 0
   });
-  res.json(db.prepare('SELECT * FROM dias WHERE data = ?').get(data));
+  const row = db.prepare('SELECT * FROM dias WHERE data = ?').get(data);
+  res.json({ ...row, falta: !!row.falta });
 });
 
 app.post('/api/dias/clear', (req, res) => {
   const { start, end } = req.body;
   if (!start || !end) return res.status(400).json({ error: 'start e end são obrigatórios' });
   db.prepare('DELETE FROM dias WHERE data >= ? AND data <= ?').run(start, end);
+  res.status(204).end();
+});
+
+// ---------- Feriados ----------
+app.get('/api/feriados', (req, res) => {
+  const rows = db.prepare('SELECT * FROM feriados ORDER BY data ASC').all();
+  res.json(rows);
+});
+
+app.post('/api/feriados', (req, res) => {
+  const { data, nome } = req.body;
+  if (!data) return res.status(400).json({ error: 'data é obrigatória' });
+  try {
+    const info = db.prepare('INSERT INTO feriados (data, nome) VALUES (?, ?)').run(data, nome || '');
+    const row = db.prepare('SELECT * FROM feriados WHERE id = ?').get(info.lastInsertRowid);
+    res.status(201).json(row);
+  } catch (e) {
+    res.status(409).json({ error: 'já existe um feriado cadastrado nessa data' });
+  }
+});
+
+app.delete('/api/feriados/:id', (req, res) => {
+  db.prepare('DELETE FROM feriados WHERE id = ?').run(req.params.id);
   res.status(204).end();
 });
 

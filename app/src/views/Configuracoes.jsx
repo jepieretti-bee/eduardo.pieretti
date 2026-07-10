@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { maskHora } from '../lib/time';
+import { fmtDataBR } from '../lib/feriados';
 
 const TEMA_OPTS = [
   ['sistema', 'Sistema'],
@@ -7,10 +8,14 @@ const TEMA_OPTS = [
   ['escuro', 'Escuro']
 ];
 
-export default function Configuracoes({ th, config, saveConfig, periodos, createPeriodo, updatePeriodo, togglePeriodo, deletePeriodo }) {
+export default function Configuracoes({
+  th, config, saveConfig, periodos, createPeriodo, updatePeriodo, togglePeriodo, deletePeriodo,
+  feriados, createFeriado, deleteFeriado
+}) {
   const [nome, setNome] = useState(config.funcionario);
   const [jornada, setJornada] = useState(config.cargaPadrao);
   const [showNovo, setShowNovo] = useState(false);
+  const [showNovoFeriado, setShowNovoFeriado] = useState(false);
 
   const card = { background: th.panel, border: `1px solid ${th.border}`, borderRadius: 14, padding: '22px 24px' };
   const sectionTitle = { fontFamily: "'Oswald',sans-serif", fontSize: 16, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' };
@@ -81,6 +86,46 @@ export default function Configuracoes({ th, config, saveConfig, periodos, create
         </p>
       </div>
 
+      {/* Feriados */}
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div style={sectionTitle}>Feriados</div>
+          <button
+            onClick={() => setShowNovoFeriado((v) => !v)}
+            style={{ cursor: 'pointer', background: showNovoFeriado ? th.stripe : th.accent, color: showNovoFeriado ? th.text : '#fff', border: 'none', borderRadius: 9, padding: '9px 15px', fontSize: 13, fontWeight: 700, fontFamily: 'Lato' }}
+          >
+            {showNovoFeriado ? 'Cancelar' : '+ Novo feriado'}
+          </button>
+        </div>
+
+        {showNovoFeriado && (
+          <NovoFeriado th={th} textInput={textInput} label={label}
+            onCreate={async (f) => { await createFeriado(f); setShowNovoFeriado(false); }} />
+        )}
+
+        {feriados.length === 0 && !showNovoFeriado && (
+          <p style={{ fontSize: 13, color: th.muted, margin: 0 }}>Nenhum feriado cadastrado ainda.</p>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {feriados.map((f) => (
+            <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: `1px solid ${th.border}`, borderRadius: 9, padding: '10px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, fontWeight: 700, color: th.text }}>{fmtDataBR(f.data)}</span>
+                <span style={{ fontSize: 13, color: th.muted }}>{f.nome || '—'}</span>
+              </div>
+              <button onClick={() => deleteFeriado(f.id)} style={{ cursor: 'pointer', background: 'transparent', border: 'none', color: th.muted, fontSize: 12, fontWeight: 700, fontFamily: 'Lato' }}>
+                Excluir
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ fontSize: 12, color: th.muted, lineHeight: 1.5, margin: '16px 0 0' }}>
+          Dias marcados como feriado não contam carga (nada a compensar), mesmo sem lançamento. Se houver horas trabalhadas nesse dia, entram como extra.
+        </p>
+      </div>
+
       {/* Tema */}
       <div style={card}>
         <div style={{ ...sectionTitle, marginBottom: 16 }}>Tema</div>
@@ -138,6 +183,35 @@ function NovoPeriodo({ th, textInput, label, onCreate }) {
         style={{ cursor: podeCriar ? 'pointer' : 'not-allowed', background: th.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: '13.5px', fontWeight: 700, fontFamily: 'Lato' }}
       >
         Criar período
+      </button>
+    </div>
+  );
+}
+
+function NovoFeriado({ th, textInput, label, onCreate }) {
+  const [data, setData] = useState('');
+  const [nome, setNome] = useState('');
+
+  const podeCriar = !!data;
+
+  return (
+    <div style={{ border: `1.5px dashed ${th.border}`, borderRadius: 12, padding: 18, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginBottom: 16 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <span style={label}>Data</span>
+          <input type="date" value={data} onChange={(e) => setData(e.target.value)} style={{ ...textInput, fontFamily: "'IBM Plex Mono',monospace" }} />
+        </label>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <span style={label}>Nome (opcional)</span>
+          <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Independência" style={textInput} />
+        </label>
+      </div>
+      <button
+        disabled={!podeCriar}
+        onClick={() => onCreate({ data, nome })}
+        style={{ cursor: podeCriar ? 'pointer' : 'not-allowed', background: th.accent, color: '#fff', border: 'none', borderRadius: 9, padding: '11px 20px', fontSize: '13.5px', fontWeight: 700, fontFamily: 'Lato' }}
+      >
+        Adicionar feriado
       </button>
     </div>
   );

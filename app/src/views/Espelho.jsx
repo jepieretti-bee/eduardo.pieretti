@@ -1,7 +1,7 @@
 import { compute, fmtMinutos } from '../lib/time';
 import { IconLock } from '../components/Icons';
 
-export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, anyLocked, clearMonth, saldoPeriodo }) {
+export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, saldoPeriodo }) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
 
   let sumWorked = 0, sumExtras = 0;
@@ -43,6 +43,7 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, an
           <thead>
             <tr style={{ background: th.headerBg, color: th.headerText }}>
               <th style={thStyle('left', '13px 16px')}>Dia</th>
+              <th style={thStyle('center', '13px 8px')}>Falta</th>
               <th style={thStyle('center', '13px 8px')}>Carga</th>
               <th style={thStyle('center', '13px 8px')}>Entrada</th>
               <th style={thStyle('center', '13px 8px')}>Saída almoço</th>
@@ -65,25 +66,42 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, an
                 extrasColor = c.diff > 0 ? th.credit : th.muted;
                 bhColor = c.diff < 0 ? th.debit : th.muted;
               }
+              const punchesDisabled = locked || row.falta;
+              const rowBg = row.falta ? th.focus : (row.isFeriado ? th.stripe : (idx % 2 ? 'transparent' : th.stripe));
               return (
-                <tr key={row.iso} style={{ borderTop: `1px solid ${th.rowBorder}`, background: idx % 2 ? 'transparent' : th.stripe }}>
-                  <td style={{ padding: '0 16px', fontWeight: 700, whiteSpace: 'nowrap' }}>{row.label}</td>
+                <tr key={row.iso} style={{ borderTop: `1px solid ${th.rowBorder}`, background: rowBg }}>
+                  <td style={{ padding: '0 16px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {row.label}
+                    {row.isFeriado && (
+                      <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: th.muted, textTransform: 'uppercase' }}>
+                        · Feriado{row.feriadoNome ? ` (${row.feriadoNome})` : ''}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: '0 8px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox" checked={row.falta}
+                      onChange={() => toggleFalta(row.iso)}
+                      disabled={locked || row.isFeriado}
+                      style={{ width: 16, height: 16, accentColor: th.debit, cursor: locked || row.isFeriado ? 'not-allowed' : 'pointer' }}
+                    />
+                  </td>
                   <td style={{ padding: 0, textAlign: 'center' }}>
-                    <input value={row.carga} onChange={(e) => updateDia(row.iso, 'carga', e.target.value)} disabled={locked} placeholder="08:00" style={{ ...cellInput(locked), color: th.muted }} />
+                    <input value={row.carga} onChange={(e) => updateDia(row.iso, 'carga', e.target.value)} disabled={locked || row.isFeriado} placeholder="08:00" style={{ ...cellInput(locked), color: th.muted }} />
                   </td>
                   <td style={{ padding: 0, textAlign: 'center', borderLeft: `1px solid ${th.rowBorder}` }}>
-                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.entrada} onChange={(e) => updateDia(row.iso, 'entrada', e.target.value)} disabled={locked} style={cellInput(locked)} />
+                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.entrada} onChange={(e) => updateDia(row.iso, 'entrada', e.target.value)} disabled={punchesDisabled} style={cellInput(punchesDisabled)} />
                   </td>
                   <td style={{ padding: 0, textAlign: 'center' }}>
-                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.saidaAlmoco} onChange={(e) => updateDia(row.iso, 'saidaAlmoco', e.target.value)} disabled={locked} style={cellInput(locked)} />
+                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.saidaAlmoco} onChange={(e) => updateDia(row.iso, 'saidaAlmoco', e.target.value)} disabled={punchesDisabled} style={cellInput(punchesDisabled)} />
                   </td>
                   <td style={{ padding: 0, textAlign: 'center' }}>
-                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.voltaAlmoco} onChange={(e) => updateDia(row.iso, 'voltaAlmoco', e.target.value)} disabled={locked} style={cellInput(locked)} />
+                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.voltaAlmoco} onChange={(e) => updateDia(row.iso, 'voltaAlmoco', e.target.value)} disabled={punchesDisabled} style={cellInput(punchesDisabled)} />
                   </td>
                   <td style={{ padding: 0, textAlign: 'center', borderRight: `1px solid ${th.rowBorder}` }}>
-                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.saida} onChange={(e) => updateDia(row.iso, 'saida', e.target.value)} disabled={locked} style={cellInput(locked)} />
+                    <input type="text" inputMode="numeric" maxLength={5} placeholder="--:--" value={row.saida} onChange={(e) => updateDia(row.iso, 'saida', e.target.value)} disabled={punchesDisabled} style={cellInput(punchesDisabled)} />
                   </td>
-                  <td style={{ padding: '11px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{horasTrab}</td>
+                  <td style={{ padding: '11px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{row.falta ? 'Falta' : horasTrab}</td>
                   <td style={{ padding: '11px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: extrasColor }}>{extras}</td>
                   <td style={{ padding: '11px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: bhColor }}>{bh}</td>
                 </tr>
@@ -92,7 +110,7 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, isLocked, an
           </tbody>
           <tfoot>
             <tr style={{ borderTop: `2px solid ${th.headerBg}`, background: th.stripe, fontWeight: 700 }}>
-              <td style={{ padding: '13px 16px', fontFamily: "'Oswald',sans-serif", textTransform: 'uppercase', letterSpacing: '.5px' }} colSpan={6}>Resultado do mês</td>
+              <td style={{ padding: '13px 16px', fontFamily: "'Oswald',sans-serif", textTransform: 'uppercase', letterSpacing: '.5px' }} colSpan={7}>Resultado do mês</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmtMinutos(sumWorked)}</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: th.credit }}>{fmtMinutos(sumExtras)}</td>
               <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: saldoPeriodo.saldoColor }} title={saldoPeriodo.saldoNote}>{saldoPeriodo.saldoTxt}</td>

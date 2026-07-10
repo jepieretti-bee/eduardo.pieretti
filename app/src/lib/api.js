@@ -27,5 +27,9 @@ export const api = {
 
   listDias: (start, end) => request(`/api/dias?start=${start}&end=${end}`),
   putDia: (data, dia) => request(`/api/dias/${data}`, { method: 'PUT', body: JSON.stringify(dia) }),
-  clearDias: (start, end) => request('/api/dias/clear', { method: 'POST', body: JSON.stringify({ start, end }) })
+  clearDias: (start, end) => request('/api/dias/clear', { method: 'POST', body: JSON.stringify({ start, end }) }),
+
+  listFeriados: () => request('/api/feriados'),
+  createFeriado: (f) => request('/api/feriados', { method: 'POST', body: JSON.stringify(f) }),
+  deleteFeriado: (id) => request(`/api/feriados/${id}`, { method: 'DELETE' })
 };

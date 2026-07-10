@@ -4,6 +4,7 @@ import { resolveTheme, cssVars } from './lib/theme';
 import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
 import { maskHora, compute, fmtMinutos } from './lib/time';
 import { isLocked, periodoForRange } from './lib/periodos';
+import { feriadoDoDia } from './lib/feriados';
 
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -19,17 +20,19 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [config, setConfig] = useState(null);
   const [periodos, setPeriodos] = useState([]);
+  const [feriados, setFeriados] = useState([]);
   const [view, setView] = useState('painel');
   const [monthKey, setMonthKey] = useState(monthKeyOf(today));
   const [selectedIso, setSelectedIso] = useState(TODAY_ISO);
   const [diasMap, setDiasMap] = useState({});
 
-  // Carga inicial: configuração e períodos.
+  // Carga inicial: configuração, períodos e feriados.
   useEffect(() => {
     (async () => {
-      const [cfg, per] = await Promise.all([api.getConfig(), api.listPeriodos()]);
+      const [cfg, per, fer] = await Promise.all([api.getConfig(), api.listPeriodos(), api.listFeriados()]);
       setConfig(cfg);
       setPeriodos(per);
+      setFeriados(fer);
       setReady(true);
     })();
   }, []);
@@ -94,13 +97,17 @@ export default function App() {
 
   function rowFor(iso, day, label) {
     const stored = diasMap[iso];
+    const feriado = feriadoDoDia(feriados, iso);
     return {
       iso, day, label,
-      carga: stored?.carga ?? cargaPadrao,
+      carga: feriado ? '0:00' : (stored?.carga ?? cargaPadrao),
       entrada: stored?.entrada ?? '',
       saidaAlmoco: stored?.saidaAlmoco ?? '',
       voltaAlmoco: stored?.voltaAlmoco ?? '',
-      saida: stored?.saida ?? ''
+      saida: stored?.saida ?? '',
+      falta: !!stored?.falta,
+      isFeriado: !!feriado,
+      feriadoNome: feriado?.nome || ''
     };
   }
 
@@ -127,9 +134,18 @@ export default function App() {
 
   async function updateDia(iso, field, val) {
     const current = diasMap[iso] || {
-      carga: cargaPadrao, entrada: '', saidaAlmoco: '', voltaAlmoco: '', saida: ''
+      carga: cargaPadrao, entrada: '', saidaAlmoco: '', voltaAlmoco: '', saida: '', falta: false
     };
     const next = { ...current, [field]: maskHora(val) };
+    setDiasMap((prev) => ({ ...prev, [iso]: next }));
+    await api.putDia(iso, next);
+  }
+
+  async function toggleFalta(iso) {
+    const current = diasMap[iso] || {
+      carga: cargaPadrao, entrada: '', saidaAlmoco: '', voltaAlmoco: '', saida: '', falta: false
+    };
+    const next = { ...current, falta: !current.falta };
     setDiasMap((prev) => ({ ...prev, [iso]: next }));
     await api.putDia(iso, next);
   }
@@ -184,6 +200,16 @@ export default function App() {
     setPeriodos((prev) => prev.filter((x) => x.id !== id));
   }
 
+  // Feriados CRUD
+  async function createFeriado(f) {
+    const created = await api.createFeriado(f);
+    setFeriados((prev) => [...prev, created].sort((a, b) => (a.data > b.data ? 1 : -1)));
+  }
+  async function deleteFeriado(id) {
+    await api.deleteFeriado(id);
+    setFeriados((prev) => prev.filter((x) => x.id !== id));
+  }
+
   return (
     <div
       style={{
@@ -216,6 +242,7 @@ export default function App() {
             onNextDay={() => changeDay(1)}
             onToday={goToday}
             updateDia={updateDia}
+            toggleFalta={toggleFalta}
             locked={isLocked(periodos, selectedIso)}
           />
         )}
@@ -226,6 +253,7 @@ export default function App() {
             rows={rawRows}
             cargaPadrao={cargaPadrao}
             updateDia={updateDia}
+            toggleFalta={toggleFalta}
             isLocked={(iso) => isLocked(periodos, iso)}
             anyLocked={rawRows.some((r) => isLocked(periodos, r.iso))}
             clearMonth={clearMonth}
@@ -243,6 +271,9 @@ export default function App() {
             updatePeriodo={updatePeriodo}
             togglePeriodo={togglePeriodo}
             deletePeriodo={deletePeriodo}
+            feriados={feriados}
+            createFeriado={createFeriado}
+            deleteFeriado={deleteFeriado}
           />
         )}
       </main>
