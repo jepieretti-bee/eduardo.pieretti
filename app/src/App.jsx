@@ -150,6 +150,25 @@ export default function App() {
     await api.putDia(iso, next);
   }
 
+  // Importação em massa (PDF do relógio de ponto): grava um dia por vez, pulando
+  // os que estiverem num período encerrado. Marcações importadas removem "falta".
+  async function importDias(porDia) {
+    let importados = 0;
+    let bloqueados = 0;
+    for (const [iso, punches] of Object.entries(porDia)) {
+      if (isLocked(periodos, iso)) { bloqueados++; continue; }
+      const current = diasMap[iso] || {
+        carga: cargaPadrao, entrada: '', saidaAlmoco: '', voltaAlmoco: '', saida: '', falta: false
+      };
+      const next = { ...current, ...punches, falta: false };
+      // eslint-disable-next-line no-await-in-loop -- grava um dia por vez para não perder atualizações concorrentes
+      await api.putDia(iso, next);
+      setDiasMap((prev) => ({ ...prev, [iso]: next }));
+      importados++;
+    }
+    return { importados, bloqueados };
+  }
+
   async function saveConfig(patch) {
     const cfg = await api.putConfig(patch);
     setConfig(cfg);
@@ -258,6 +277,7 @@ export default function App() {
             anyLocked={rawRows.some((r) => isLocked(periodos, r.iso))}
             clearMonth={clearMonth}
             saldoPeriodo={saldoPeriodoInfo}
+            importDias={importDias}
           />
         )}
 

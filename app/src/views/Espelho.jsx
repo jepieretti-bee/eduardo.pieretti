@@ -1,8 +1,34 @@
+import { useRef, useState } from 'react';
 import { compute, fmtMinutos } from '../lib/time';
 import { IconLock } from '../components/Icons';
+import { extrairMarcacoesPdf } from '../lib/pdfImport';
+import { fmtDataBR } from '../lib/feriados';
 
-export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, saldoPeriodo }) {
+export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, saldoPeriodo, importDias }) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
+  const fileInputRef = useRef(null);
+  const [importState, setImportState] = useState(null);
+
+  async function handleFileChosen(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportState({ status: 'parsing' });
+    try {
+      const { porDia, totalMarcacoes, totalDias } = await extrairMarcacoesPdf(file);
+      setImportState({ status: 'preview', porDia, totalMarcacoes, totalDias });
+    } catch (err) {
+      setImportState({ status: 'error', message: err.message || 'Não foi possível ler esse PDF.' });
+    }
+  }
+
+  async function confirmarImport() {
+    if (importState?.status !== 'preview') return;
+    const { porDia } = importState;
+    setImportState({ status: 'importando' });
+    const { importados, bloqueados } = await importDias(porDia);
+    setImportState({ status: 'done', importados, bloqueados });
+  }
 
   let sumWorked = 0, sumExtras = 0;
   computed.forEach((c) => {
@@ -36,7 +62,51 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta,
       <div className="no-print" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <button onClick={() => window.print()} style={toolBtn(th)}>Imprimir</button>
         <button onClick={handleClear} style={toolBtn(th)}>Limpar mês</button>
+        <button onClick={() => fileInputRef.current?.click()} style={toolBtn(th)}>Importar PDF</button>
+        <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handleFileChosen} style={{ display: 'none' }} />
       </div>
+
+      {importState && (
+        <div className="no-print" style={{ background: th.panel, border: `1px solid ${th.border}`, borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
+          {importState.status === 'parsing' && (
+            <span style={{ fontSize: 13.5, color: th.muted }}>Lendo PDF…</span>
+          )}
+          {importState.status === 'error' && (
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: th.debit, marginBottom: 8 }}>{importState.message}</div>
+              <button onClick={() => setImportState(null)} style={toolBtn(th)}>Fechar</button>
+            </div>
+          )}
+          {importState.status === 'preview' && (
+            <div>
+              <div style={{ fontSize: 13.5, color: th.text, marginBottom: 4 }}>
+                Encontramos <strong>{importState.totalMarcacoes}</strong> marcações em <strong>{importState.totalDias}</strong> dias
+                {' '}({fmtDataBR(Object.keys(importState.porDia).sort()[0])} – {fmtDataBR(Object.keys(importState.porDia).sort().slice(-1)[0])}).
+              </div>
+              <div style={{ fontSize: 12.5, color: th.muted, marginBottom: 12 }}>
+                Isso vai sobrescrever entrada/saída dos dias listados (mesmo em outros meses) e remover a marcação de falta desses dias. Dias em períodos encerrados são pulados.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={confirmarImport} style={{ ...toolBtn(th), background: th.accent, color: '#fff', border: 'none' }}>
+                  Confirmar importação
+                </button>
+                <button onClick={() => setImportState(null)} style={toolBtn(th)}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {importState.status === 'importando' && (
+            <span style={{ fontSize: 13.5, color: th.muted }}>Importando…</span>
+          )}
+          {importState.status === 'done' && (
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: th.credit, marginBottom: 8 }}>
+                {importState.importados} dia(s) importado(s){importState.bloqueados > 0 ? `, ${importState.bloqueados} pulado(s) por período encerrado` : ''}.
+              </div>
+              <button onClick={() => setImportState(null)} style={toolBtn(th)}>Fechar</button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ background: th.panel, border: `1px solid ${th.border}`, borderRadius: 14, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
