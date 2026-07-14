@@ -275,6 +275,7 @@ export default function App() {
         <TopBar
           th={th}
           view={view}
+          navCaption={view === 'painel' ? 'Período' : null}
           navLabel={
             view === 'painel'
               ? (periodoPainel ? fmtRangeBR(periodoPainel.dataInicio, periodoPainel.dataFim) : monthLabel(monthKey))
