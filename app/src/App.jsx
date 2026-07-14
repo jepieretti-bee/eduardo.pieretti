@@ -3,8 +3,8 @@ import { api } from './lib/api';
 import { resolveTheme, cssVars } from './lib/theme';
 import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
 import { maskHora, compute, fmtMinutos } from './lib/time';
-import { isLocked, periodoForRange } from './lib/periodos';
-import { feriadoDoDia } from './lib/feriados';
+import { isLocked } from './lib/periodos';
+import { feriadoDoDia, fmtDataBR } from './lib/feriados';
 
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -25,6 +25,7 @@ export default function App() {
   const [monthKey, setMonthKey] = useState(monthKeyOf(today));
   const [selectedIso, setSelectedIso] = useState(TODAY_ISO);
   const [diasMap, setDiasMap] = useState({});
+  const [periodoPainelId, setPeriodoPainelId] = useState(null);
 
   // Carga inicial: configuração, períodos e feriados.
   useEffect(() => {
@@ -50,15 +51,26 @@ export default function App() {
 
   useEffect(() => { if (ready) loadMonth(monthKey); }, [ready, monthKey, loadMonth]);
 
-  // Período que cobre o mês em exibição (por sobreposição de intervalo — o período
-  // não precisa começar no dia 1º). O saldo do banco de horas acumula dentro dele.
-  const periodoAtual = useMemo(() => {
-    const { start, end } = monthRange(monthKey);
-    return periodoForRange(periodos, start, end);
-  }, [periodos, monthKey]);
+  // Períodos ordenados por data de início — o Painel navega por essa lista (não por mês).
+  const periodosOrdenados = useMemo(
+    () => [...periodos].sort((a, b) => (a.dataInicio < b.dataInicio ? -1 : a.dataInicio > b.dataInicio ? 1 : 0)),
+    [periodos]
+  );
 
-  // Carrega todos os lançamentos do período ativo (pode abranger vários meses),
-  // para o saldo do banco de horas acumular corretamente, zerando só noutro período.
+  // Índice do período selecionado no Painel: usa o escolhido via navegação, ou por
+  // padrão o período que cobre hoje, ou o último cadastrado, ou nenhum (-1).
+  const periodoPainelIndex = useMemo(() => {
+    if (periodosOrdenados.length === 0) return -1;
+    if (periodoPainelId != null) {
+      const idx = periodosOrdenados.findIndex((p) => p.id === periodoPainelId);
+      if (idx >= 0) return idx;
+    }
+    const idxHoje = periodosOrdenados.findIndex((p) => p.dataInicio <= TODAY_ISO && TODAY_ISO <= p.dataFim);
+    return idxHoje >= 0 ? idxHoje : periodosOrdenados.length - 1;
+  }, [periodosOrdenados, periodoPainelId]);
+
+  // Carrega todos os lançamentos do período selecionado no Painel (pode abranger
+  // vários meses), para os totais acumularem corretamente, zerando só noutro período.
   const loadRange = useCallback(async (start, end) => {
     const rows = await api.listDias(start, end);
     setDiasMap((prev) => {
@@ -68,9 +80,10 @@ export default function App() {
     });
   }, []);
 
+  const periodoPainel = periodoPainelIndex >= 0 ? periodosOrdenados[periodoPainelIndex] : null;
   useEffect(() => {
-    if (ready && periodoAtual) loadRange(periodoAtual.dataInicio, periodoAtual.dataFim);
-  }, [ready, periodoAtual, loadRange]);
+    if (ready && periodoPainel) loadRange(periodoPainel.dataInicio, periodoPainel.dataFim);
+  }, [ready, periodoPainel, loadRange]);
 
   // Tema: recalcula quando preferência do SO muda (modo "Sistema").
   const [, forceTick] = useState(0);
@@ -113,24 +126,39 @@ export default function App() {
 
   const rawRows = businessDaysOfMonth(monthKey).map((d) => rowFor(d.iso, d.day, d.label));
 
-  // Saldo do banco de horas: acumulado nos dias do período ativo (não só no mês em
-  // exibição), zerando apenas quando o período em questão muda. Sem período cadastrado
-  // cobrindo o mês, cai de volta ao saldo do próprio mês (comportamento anterior).
-  const periodoRows = periodoAtual
-    ? businessDaysInRange(periodoAtual.dataInicio, periodoAtual.dataFim).map((d) => rowFor(d.iso, d.day, d.label))
+  // Painel: totais (trabalhadas/extras/atraso/saldo) acumulados em todos os dias do
+  // período selecionado na navegação do Painel (pode abranger vários meses), zerando
+  // só ao trocar de período. Sem nenhum período cadastrado, cai para o mês atual.
+  const painelRows = periodoPainel
+    ? businessDaysInRange(periodoPainel.dataInicio, periodoPainel.dataFim).map((d) => rowFor(d.iso, d.day, d.label))
     : rawRows;
-  const saldoPeriodo = periodoRows.reduce((acc, r) => {
+  const painelTotais = painelRows.reduce((acc, r) => {
     const c = compute(r, cargaPadrao);
-    return acc + (c.have ? c.diff : 0);
-  }, 0);
-  const saldoPeriodoInfo = {
-    saldo: saldoPeriodo,
-    saldoTxt: (saldoPeriodo >= 0 ? '+' : '') + fmtMinutos(saldoPeriodo),
-    saldoColor: saldoPeriodo > 0 ? th.credit : saldoPeriodo < 0 ? th.debit : th.muted,
-    saldoNote: periodoAtual
-      ? `acumulado em ${periodoAtual.nome || 'período'} (${periodoAtual.dataInicio.split('-').reverse().join('/')} – ${periodoAtual.dataFim.split('-').reverse().join('/')})`
-      : (saldoPeriodo >= 0 ? 'horas a favor no mês' : 'horas devidas no mês')
+    if (c.have) {
+      acc.sumWorked += c.worked;
+      acc.sumCarga += c.carga ?? 0;
+      if (c.diff > 0) acc.sumExtras += c.diff; else acc.sumDebit += -c.diff;
+      acc.saldo += c.diff;
+      acc.daysDone++;
+    }
+    return acc;
+  }, { sumWorked: 0, sumCarga: 0, sumExtras: 0, sumDebit: 0, saldo: 0, daysDone: 0 });
+
+  const painelInfo = {
+    ...painelTotais,
+    escopoLabel: periodoPainel ? (periodoPainel.nome || 'Período') : null,
+    saldoTxt: (painelTotais.saldo >= 0 ? '+' : '') + fmtMinutos(painelTotais.saldo),
+    saldoColor: painelTotais.saldo > 0 ? th.credit : painelTotais.saldo < 0 ? th.debit : th.muted,
+    saldoNote: periodoPainel
+      ? `acumulado em ${periodoPainel.nome || 'período'} (${fmtDataBR(periodoPainel.dataInicio)} – ${fmtDataBR(periodoPainel.dataFim)})`
+      : (painelTotais.saldo >= 0 ? 'horas a favor no mês' : 'horas devidas no mês')
   };
+
+  function changePeriodoPainel(delta) {
+    if (periodosOrdenados.length === 0) return;
+    const next = Math.min(Math.max(periodoPainelIndex + delta, 0), periodosOrdenados.length - 1);
+    setPeriodoPainelId(periodosOrdenados[next].id);
+  }
 
   async function updateDia(iso, field, val) {
     const current = diasMap[iso] || {
@@ -243,13 +271,19 @@ export default function App() {
         <TopBar
           th={th}
           view={view}
-          monthLabel={monthLabel(monthKey)}
-          onPrevMonth={() => changeMonth(-1)}
-          onNextMonth={() => changeMonth(1)}
+          navLabel={
+            view === 'painel'
+              ? (periodoPainel ? (periodoPainel.nome || `${fmtDataBR(periodoPainel.dataInicio)} – ${fmtDataBR(periodoPainel.dataFim)}`) : monthLabel(monthKey))
+              : monthLabel(monthKey)
+          }
+          onPrev={view === 'painel' ? () => changePeriodoPainel(-1) : () => changeMonth(-1)}
+          onNext={view === 'painel' ? () => changePeriodoPainel(1) : () => changeMonth(1)}
+          prevDisabled={view === 'painel' && (periodosOrdenados.length === 0 || periodoPainelIndex <= 0)}
+          nextDisabled={view === 'painel' && (periodosOrdenados.length === 0 || periodoPainelIndex >= periodosOrdenados.length - 1)}
         />
 
         {view === 'painel' && (
-          <Painel th={th} rows={rawRows} cargaPadrao={cargaPadrao} saldoPeriodo={saldoPeriodoInfo} />
+          <Painel th={th} rows={painelRows} cargaPadrao={cargaPadrao} saldoPeriodo={painelInfo} />
         )}
 
         {view === 'registrar' && (
@@ -276,7 +310,6 @@ export default function App() {
             isLocked={(iso) => isLocked(periodos, iso)}
             anyLocked={rawRows.some((r) => isLocked(periodos, r.iso))}
             clearMonth={clearMonth}
-            saldoPeriodo={saldoPeriodoInfo}
             importDias={importDias}
           />
         )}

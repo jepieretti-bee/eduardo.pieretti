@@ -1,25 +1,15 @@
 import { compute, fmtMinutos, parseHora } from '../lib/time';
 
-export default function Painel({ th, rows, cargaPadrao, saldoPeriodo }) {
+export default function Painel({ th, rows, cargaPadrao, saldoPeriodo: totais }) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
-
-  let sumWorked = 0, sumCarga = 0, sumExtras = 0, sumDebit = 0, daysDone = 0;
   let maxV = parseHora(cargaPadrao) || 480;
-  computed.forEach((c) => {
-    if (c.have) {
-      sumWorked += c.worked;
-      sumCarga += c.carga ?? 0;
-      if (c.diff > 0) sumExtras += c.diff; else sumDebit += -c.diff;
-      daysDone++;
-      if (c.worked > maxV) maxV = c.worked;
-    }
-  });
+  computed.forEach((c) => { if (c.have && c.worked > maxV) maxV = c.worked; });
 
   const kpis = [
-    { label: 'Horas trabalhadas', value: fmtMinutos(sumWorked), color: th.text, accent: th.accent, sub: fmtMinutos(sumCarga) + ' de carga' },
-    { label: 'Horas extras', value: fmtMinutos(sumExtras), color: th.credit, accent: th.credit, sub: daysDone + ' dias registrados' },
-    { label: 'Atraso / Falta', value: fmtMinutos(sumDebit), color: th.debit, accent: th.debit, sub: 'a compensar' },
-    { label: 'Saldo', value: saldoPeriodo.saldoTxt, color: saldoPeriodo.saldoColor, accent: saldoPeriodo.saldo < 0 ? th.debit : th.credit, sub: 'banco de horas' }
+    { label: 'Horas trabalhadas', value: fmtMinutos(totais.sumWorked), color: th.text, accent: th.accent, sub: fmtMinutos(totais.sumCarga) + ' de carga' },
+    { label: 'Horas extras', value: fmtMinutos(totais.sumExtras), color: th.credit, accent: th.credit, sub: totais.daysDone + ' dias registrados' },
+    { label: 'Atraso / Falta', value: fmtMinutos(totais.sumDebit), color: th.debit, accent: th.debit, sub: 'a compensar' },
+    { label: 'Saldo', value: totais.saldoTxt, color: totais.saldoColor, accent: totais.saldo < 0 ? th.debit : th.credit, sub: 'banco de horas' }
   ];
 
   const chart = rows.map((r, idx) => {
@@ -31,6 +21,7 @@ export default function Painel({ th, rows, cargaPadrao, saldoPeriodo }) {
   });
 
   const card = { background: th.panel, border: `1px solid ${th.border}`, borderRadius: 14 };
+  const resultadoTitulo = totais.escopoLabel ? `Resultado — ${totais.escopoLabel}` : 'Resultado do mês';
 
   return (
     <div>
@@ -65,21 +56,21 @@ export default function Painel({ th, rows, cargaPadrao, saldoPeriodo }) {
         </div>
 
         <div style={{ ...card, padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 16, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 16 }}>Resultado do mês</div>
+          <div style={{ fontFamily: "'Oswald',sans-serif", fontSize: 16, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 16 }}>{resultadoTitulo}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: `1px solid ${th.border}` }}>
               <span style={{ fontSize: 13, color: th.muted }}>Horas extras</span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 16, fontWeight: 600, color: th.credit }}>{fmtMinutos(sumExtras)}</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 16, fontWeight: 600, color: th.credit }}>{fmtMinutos(totais.sumExtras)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: `1px solid ${th.border}` }}>
               <span style={{ fontSize: 13, color: th.muted }}>Atraso / Falta</span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 16, fontWeight: 600, color: th.debit }}>{fmtMinutos(sumDebit)}</span>
+              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 16, fontWeight: 600, color: th.debit }}>{fmtMinutos(totais.sumDebit)}</span>
             </div>
           </div>
           <div style={{ marginTop: 'auto', paddingTop: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: th.muted }}>Saldo do banco de horas</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 40, fontWeight: 600, lineHeight: 1.1, color: saldoPeriodo.saldoColor }}>{saldoPeriodo.saldoTxt}</div>
-            <div style={{ fontSize: 12, color: th.muted, marginTop: 2 }}>{saldoPeriodo.saldoNote}</div>
+            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 40, fontWeight: 600, lineHeight: 1.1, color: totais.saldoColor }}>{totais.saldoTxt}</div>
+            <div style={{ fontSize: 12, color: th.muted, marginTop: 2 }}>{totais.saldoNote}</div>
           </div>
         </div>
       </div>

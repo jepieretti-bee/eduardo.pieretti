@@ -5,7 +5,7 @@ const TITLES = {
   config: ['Ajustes', 'Configurações']
 };
 
-export default function TopBar({ th, view, monthLabel, onPrevMonth, onNextMonth }) {
+export default function TopBar({ th, view, navLabel, onPrev, onNext, prevDisabled, nextDisabled }) {
   const [kicker, title] = TITLES[view];
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -16,19 +16,20 @@ export default function TopBar({ th, view, monthLabel, onPrevMonth, onNextMonth 
         </h1>
       </div>
       <div className="no-print" style={{ display: 'flex', alignItems: 'center', gap: 6, background: th.panel, border: `1px solid ${th.border}`, borderRadius: 11, padding: 5 }}>
-        <button onClick={onPrevMonth} style={navBtnStyle(th)}>‹</button>
+        <button onClick={onPrev} disabled={prevDisabled} style={navBtnStyle(th, prevDisabled)}>‹</button>
         <div style={{ minWidth: 158, textAlign: 'center', fontWeight: 700, fontSize: 14.5, textTransform: 'capitalize', fontFamily: "'Oswald',sans-serif", letterSpacing: '.5px' }}>
-          {monthLabel}
+          {navLabel}
         </div>
-        <button onClick={onNextMonth} style={navBtnStyle(th)}>›</button>
+        <button onClick={onNext} disabled={nextDisabled} style={navBtnStyle(th, nextDisabled)}>›</button>
       </div>
     </div>
   );
 }
 
-function navBtnStyle(th) {
+function navBtnStyle(th, disabled) {
   return {
-    cursor: 'pointer', border: 'none', background: 'transparent', color: th.text,
+    cursor: disabled ? 'not-allowed' : 'pointer', border: 'none', background: 'transparent',
+    color: disabled ? th.border : th.text, opacity: disabled ? 0.6 : 1,
     width: 36, height: 36, borderRadius: 8, fontSize: 19, lineHeight: 1,
     display: 'flex', alignItems: 'center', justifyContent: 'center'
   };
