@@ -25,7 +25,7 @@ export default function Configuracoes({
   const card = { background: th.panel, border: `1px solid ${th.border}`, borderRadius: 14, padding: '22px 24px' };
   const sectionTitle = { fontFamily: "'Oswald',sans-serif", fontSize: 16, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' };
   const label = { fontSize: 11, fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', color: th.muted };
-  const textInput = { fontFamily: 'Lato', fontSize: 15, fontWeight: 600, color: th.text, border: `1.5px solid ${th.border}`, borderRadius: 9, padding: '11px 13px', background: th.bg, outline: 'none' };
+  const textInput = { width: '100%', boxSizing: 'border-box', fontFamily: 'Lato', fontSize: 15, fontWeight: 600, color: th.text, border: `1.5px solid ${th.border}`, borderRadius: 9, padding: '11px 13px', background: th.bg, outline: 'none' };
   const monoInput = { ...textInput, fontFamily: "'IBM Plex Mono',monospace", textAlign: 'center' };
 
   return (
@@ -48,7 +48,7 @@ export default function Configuracoes({
       <div style={card}>
         <div style={{ ...sectionTitle, marginBottom: 18 }}>Jornada de trabalho</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 18 }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
             <span style={label}>Entrada</span>
             <input
               value={jEntrada} onChange={(e) => setJEntrada(maskHora(e.target.value))}
@@ -56,7 +56,7 @@ export default function Configuracoes({
               inputMode="numeric" maxLength={5} placeholder="08:00" style={monoInput}
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
             <span style={label}>Saída almoço</span>
             <input
               value={jSaidaAlmoco} onChange={(e) => setJSaidaAlmoco(maskHora(e.target.value))}
@@ -64,7 +64,7 @@ export default function Configuracoes({
               inputMode="numeric" maxLength={5} placeholder="11:00" style={monoInput}
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
             <span style={label}>Volta almoço</span>
             <input
               value={jVoltaAlmoco} onChange={(e) => setJVoltaAlmoco(maskHora(e.target.value))}
@@ -72,7 +72,7 @@ export default function Configuracoes({
               inputMode="numeric" maxLength={5} placeholder="12:00" style={monoInput}
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
             <span style={label}>Saída</span>
             <input
               value={jSaida} onChange={(e) => setJSaida(maskHora(e.target.value))}
@@ -308,11 +308,11 @@ function NovoPeriodo({ th, textInput, label, onCreate }) {
         <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Competência Junho/Julho 2026" style={textInput} />
       </label>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
           <span style={label}>Data de início</span>
           <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} style={{ ...textInput, fontFamily: "'IBM Plex Mono',monospace" }} />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
           <span style={label}>Data de fim</span>
           <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} style={{ ...textInput, fontFamily: "'IBM Plex Mono',monospace" }} />
         </label>
@@ -337,11 +337,11 @@ function NovoFeriado({ th, textInput, label, onCreate }) {
   return (
     <div style={{ border: `1.5px dashed ${th.border}`, borderRadius: 12, padding: 18, marginBottom: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16, marginBottom: 16 }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
           <span style={label}>Data</span>
           <input type="date" value={data} onChange={(e) => setData(e.target.value)} style={{ ...textInput, fontFamily: "'IBM Plex Mono',monospace" }} />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
           <span style={label}>Nome (opcional)</span>
           <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Independência" style={textInput} />
         </label>
@@ -389,7 +389,7 @@ function PeriodoCard({ th, periodo, textInput, label, onSave, onToggle, onDelete
       </label>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
           <span style={label}>Data de início</span>
           <input
             type="date" value={inicio} disabled={locked}
@@ -397,7 +397,7 @@ function PeriodoCard({ th, periodo, textInput, label, onSave, onToggle, onDelete
             style={{ ...textInput, fontFamily: "'IBM Plex Mono',monospace" }}
           />
         </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
           <span style={label}>Data de fim</span>
           <input
             type="date" value={fim} disabled={locked}
