@@ -4,7 +4,7 @@ import { resolveTheme, cssVars } from './lib/theme';
 import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
 import { maskHora, compute, fmtMinutos } from './lib/time';
 import { isLocked } from './lib/periodos';
-import { feriadoDoDia, fmtDataBR } from './lib/feriados';
+import { feriadoDoDia, fmtDataBR, fmtRangeBR } from './lib/feriados';
 
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -69,8 +69,7 @@ export default function App() {
     return idxHoje >= 0 ? idxHoje : periodosOrdenados.length - 1;
   }, [periodosOrdenados, periodoPainelId]);
 
-  // Carrega todos os lançamentos do período selecionado no Painel (pode abranger
-  // vários meses), para os totais acumularem corretamente, zerando só noutro período.
+  // Carrega os lançamentos de um intervalo de datas (mescla no cache global).
   const loadRange = useCallback(async (start, end) => {
     const rows = await api.listDias(start, end);
     setDiasMap((prev) => {
@@ -81,9 +80,14 @@ export default function App() {
   }, []);
 
   const periodoPainel = periodoPainelIndex >= 0 ? periodosOrdenados[periodoPainelIndex] : null;
+
+  // Pré-carrega os lançamentos de TODOS os períodos cadastrados assim que a lista
+  // muda — assim os totais do Painel já vêm completos ao navegar entre períodos,
+  // sem uma janela em que o total apareça incompleto por ainda estar buscando.
   useEffect(() => {
-    if (ready && periodoPainel) loadRange(periodoPainel.dataInicio, periodoPainel.dataFim);
-  }, [ready, periodoPainel, loadRange]);
+    if (!ready) return;
+    periodosOrdenados.forEach((p) => { loadRange(p.dataInicio, p.dataFim); });
+  }, [ready, periodosOrdenados, loadRange]);
 
   // Tema: recalcula quando preferência do SO muda (modo "Sistema").
   const [, forceTick] = useState(0);
@@ -273,7 +277,7 @@ export default function App() {
           view={view}
           navLabel={
             view === 'painel'
-              ? (periodoPainel ? (periodoPainel.nome || `${fmtDataBR(periodoPainel.dataInicio)} – ${fmtDataBR(periodoPainel.dataFim)}`) : monthLabel(monthKey))
+              ? (periodoPainel ? fmtRangeBR(periodoPainel.dataInicio, periodoPainel.dataFim) : monthLabel(monthKey))
               : monthLabel(monthKey)
           }
           onPrev={view === 'painel' ? () => changePeriodoPainel(-1) : () => changeMonth(-1)}
