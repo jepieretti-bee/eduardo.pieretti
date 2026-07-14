@@ -5,10 +5,10 @@ import { extrairMarcacoesPdf } from '../lib/pdfImport';
 import { fmtDataBR } from '../lib/feriados';
 
 export default function Espelho({
-  th, rows, cargaPadrao, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, importDias,
+  th, rows, cargaPadrao, jornada, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, importDias,
   diasForaDePeriodo = [], foraDePeriodoFn
 }) {
-  const computed = rows.map((r) => compute(r, cargaPadrao));
+  const computed = rows.map((r) => compute(r, jornada ?? cargaPadrao));
   const fileInputRef = useRef(null);
   const [importState, setImportState] = useState(null);
 

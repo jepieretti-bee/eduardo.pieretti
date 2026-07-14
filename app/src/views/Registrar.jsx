@@ -8,9 +8,9 @@ const PUNCH_FIELDS = [
   { field: 'saida', label: 'Saída' }
 ];
 
-export default function Registrar({ th, rows, selectedIso, onPrevDay, onNextDay, onToday, updateDia, toggleFalta, locked }) {
+export default function Registrar({ th, rows, jornada, selectedIso, onPrevDay, onNextDay, onToday, updateDia, toggleFalta, locked }) {
   const srow = rows.find((r) => r.iso === selectedIso) || rows[0];
-  const sc = srow ? compute(srow) : { have: false, worked: 0, diff: 0, filled: 0 };
+  const sc = srow ? compute(srow, jornada) : { have: false, worked: 0, diff: 0, filled: 0 };
   const punchesDisabled = locked || sc.falta;
 
   let statusText = 'Não registrado', statusColor = th.muted, statusBg = th.stripe;

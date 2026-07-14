@@ -18,17 +18,27 @@ app.get('/api/config', (req, res) => {
 });
 
 app.put('/api/config', (req, res) => {
-  const { empresa, funcionario, cargaPadrao, tema } = req.body;
+  const { empresa, funcionario, cargaPadrao, tema, jornadaEntrada, jornadaSaidaAlmoco, jornadaVoltaAlmoco, jornadaSaida, tolerancia } = req.body;
   const current = db.prepare('SELECT * FROM config WHERE id = 1').get();
   const next = {
     empresa: empresa ?? current.empresa,
     funcionario: funcionario ?? current.funcionario,
     cargaPadrao: cargaPadrao ?? current.cargaPadrao,
-    tema: tema ?? current.tema
+    tema: tema ?? current.tema,
+    jornadaEntrada: jornadaEntrada ?? current.jornadaEntrada,
+    jornadaSaidaAlmoco: jornadaSaidaAlmoco ?? current.jornadaSaidaAlmoco,
+    jornadaVoltaAlmoco: jornadaVoltaAlmoco ?? current.jornadaVoltaAlmoco,
+    jornadaSaida: jornadaSaida ?? current.jornadaSaida,
+    tolerancia: Number.isFinite(tolerancia) ? tolerancia : current.tolerancia
   };
   db.prepare(
-    'UPDATE config SET empresa = ?, funcionario = ?, cargaPadrao = ?, tema = ? WHERE id = 1'
-  ).run(next.empresa, next.funcionario, next.cargaPadrao, next.tema);
+    `UPDATE config SET empresa = ?, funcionario = ?, cargaPadrao = ?, tema = ?,
+       jornadaEntrada = ?, jornadaSaidaAlmoco = ?, jornadaVoltaAlmoco = ?, jornadaSaida = ?, tolerancia = ?
+     WHERE id = 1`
+  ).run(
+    next.empresa, next.funcionario, next.cargaPadrao, next.tema,
+    next.jornadaEntrada, next.jornadaSaidaAlmoco, next.jornadaVoltaAlmoco, next.jornadaSaida, next.tolerancia
+  );
   res.json(db.prepare('SELECT * FROM config WHERE id = 1').get());
 });
 
@@ -170,8 +180,14 @@ app.post('/api/backup/restore', (req, res) => {
   try {
     db.exec('BEGIN');
 
-    db.prepare('UPDATE config SET empresa = ?, funcionario = ?, cargaPadrao = ?, tema = ? WHERE id = 1').run(
-      config.empresa || 'SIPLAN', config.funcionario || '', config.cargaPadrao || '08:00', config.tema || 'claro'
+    db.prepare(
+      `UPDATE config SET empresa = ?, funcionario = ?, cargaPadrao = ?, tema = ?,
+         jornadaEntrada = ?, jornadaSaidaAlmoco = ?, jornadaVoltaAlmoco = ?, jornadaSaida = ?, tolerancia = ?
+       WHERE id = 1`
+    ).run(
+      config.empresa || 'SIPLAN', config.funcionario || '', config.cargaPadrao || '08:00', config.tema || 'claro',
+      config.jornadaEntrada || '08:00', config.jornadaSaidaAlmoco || '11:00', config.jornadaVoltaAlmoco || '12:00',
+      config.jornadaSaida || '17:00', Number.isFinite(config.tolerancia) ? config.tolerancia : 15
     );
 
     db.exec('DELETE FROM periodos');

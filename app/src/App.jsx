@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { api } from './lib/api';
 import { resolveTheme, cssVars } from './lib/theme';
 import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
-import { maskHora, compute, fmtMinutos } from './lib/time';
+import { maskHora, compute, fmtMinutos, parseHora } from './lib/time';
 import { isLocked, foraDePeriodo } from './lib/periodos';
 import { feriadoDoDia, fmtDataBR, fmtRangeBR } from './lib/feriados';
 
@@ -124,8 +124,25 @@ export default function App() {
     return <div style={{ padding: 40, fontFamily: 'Lato, sans-serif', color: '#999' }}>Carregando…</div>;
   }
 
-  const cargaPadrao = config.cargaPadrao || '08:00';
   const funcionario = config.funcionario || 'Colaborador';
+
+  // Jornada por intervalos: quando os 4 horários estão cadastrados, a carga padrão
+  // passa a ser derivada deles ((saída almoço - entrada) + (saída - volta almoço)).
+  const jE = parseHora(config.jornadaEntrada);
+  const jSA = parseHora(config.jornadaSaidaAlmoco);
+  const jVA = parseHora(config.jornadaVoltaAlmoco);
+  const jS = parseHora(config.jornadaSaida);
+  const jornadaCompleta = jE != null && jSA != null && jVA != null && jS != null;
+  const cargaPadrao = jornadaCompleta ? fmtMinutos((jSA - jE) + (jS - jVA)) : (config.cargaPadrao || '08:00');
+
+  const jornada = {
+    entrada: config.jornadaEntrada,
+    saidaAlmoco: config.jornadaSaidaAlmoco,
+    voltaAlmoco: config.jornadaVoltaAlmoco,
+    saida: config.jornadaSaida,
+    tolerancia: Number.isFinite(config.tolerancia) ? config.tolerancia : 15,
+    cargaPadrao
+  };
 
   function rowFor(iso, day, label) {
     const stored = diasMap[iso];
@@ -155,7 +172,7 @@ export default function App() {
     ? businessDaysInRange(periodoPainel.dataInicio, periodoPainel.dataFim).map((d) => rowFor(d.iso, d.day, d.label))
     : rawRows;
   const painelTotais = painelRows.reduce((acc, r) => {
-    const c = compute(r, cargaPadrao);
+    const c = compute(r, jornada);
     if (c.have) {
       acc.sumWorked += c.worked;
       acc.sumCarga += c.carga ?? 0;
@@ -306,13 +323,14 @@ export default function App() {
         />
 
         {view === 'painel' && (
-          <Painel th={th} rows={painelRows} cargaPadrao={cargaPadrao} saldoPeriodo={painelInfo} diasForaDePeriodo={diasForaDePeriodo} />
+          <Painel th={th} rows={painelRows} cargaPadrao={cargaPadrao} jornada={jornada} saldoPeriodo={painelInfo} diasForaDePeriodo={diasForaDePeriodo} />
         )}
 
         {view === 'registrar' && (
           <Registrar
             th={th}
             rows={rawRows}
+            jornada={jornada}
             selectedIso={selectedIso}
             onPrevDay={() => changeDay(-1)}
             onNextDay={() => changeDay(1)}
@@ -328,6 +346,7 @@ export default function App() {
             th={th}
             rows={rawRows}
             cargaPadrao={cargaPadrao}
+            jornada={jornada}
             updateDia={updateDia}
             toggleFalta={toggleFalta}
             isLocked={(iso) => isLocked(periodos, iso)}

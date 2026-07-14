@@ -14,7 +14,12 @@ db.exec(`
     empresa TEXT NOT NULL DEFAULT 'SIPLAN',
     funcionario TEXT NOT NULL DEFAULT '',
     cargaPadrao TEXT NOT NULL DEFAULT '08:00',
-    tema TEXT NOT NULL DEFAULT 'claro'
+    tema TEXT NOT NULL DEFAULT 'claro',
+    jornadaEntrada TEXT NOT NULL DEFAULT '08:00',
+    jornadaSaidaAlmoco TEXT NOT NULL DEFAULT '11:00',
+    jornadaVoltaAlmoco TEXT NOT NULL DEFAULT '12:00',
+    jornadaSaida TEXT NOT NULL DEFAULT '17:00',
+    tolerancia INTEGER NOT NULL DEFAULT 15
   );
 
   CREATE TABLE IF NOT EXISTS periodos (
@@ -49,10 +54,23 @@ if (!diasCols.includes('falta')) {
   db.exec('ALTER TABLE dias ADD COLUMN falta INTEGER NOT NULL DEFAULT 0');
 }
 
+// Migração: bancos criados antes da jornada por intervalos existir.
+const configCols = db.prepare("PRAGMA table_info(config)").all().map((c) => c.name);
+if (!configCols.includes('jornadaEntrada')) {
+  db.exec(`
+    ALTER TABLE config ADD COLUMN jornadaEntrada TEXT NOT NULL DEFAULT '08:00';
+    ALTER TABLE config ADD COLUMN jornadaSaidaAlmoco TEXT NOT NULL DEFAULT '11:00';
+    ALTER TABLE config ADD COLUMN jornadaVoltaAlmoco TEXT NOT NULL DEFAULT '12:00';
+    ALTER TABLE config ADD COLUMN jornadaSaida TEXT NOT NULL DEFAULT '17:00';
+    ALTER TABLE config ADD COLUMN tolerancia INTEGER NOT NULL DEFAULT 15;
+  `);
+}
+
 const configExists = db.prepare('SELECT id FROM config WHERE id = 1').get();
 if (!configExists) {
   db.prepare(
-    `INSERT INTO config (id, empresa, funcionario, cargaPadrao, tema) VALUES (1, 'SIPLAN', 'José Eduardo Pieretti', '08:00', 'claro')`
+    `INSERT INTO config (id, empresa, funcionario, cargaPadrao, tema, jornadaEntrada, jornadaSaidaAlmoco, jornadaVoltaAlmoco, jornadaSaida, tolerancia)
+     VALUES (1, 'SIPLAN', 'José Eduardo Pieretti', '08:00', 'claro', '08:00', '11:00', '12:00', '17:00', 15)`
   ).run();
 }
 

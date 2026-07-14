@@ -14,7 +14,11 @@ export default function Configuracoes({
   feriados, createFeriado, deleteFeriado
 }) {
   const [nome, setNome] = useState(config.funcionario);
-  const [jornada, setJornada] = useState(config.cargaPadrao);
+  const [jEntrada, setJEntrada] = useState(config.jornadaEntrada || '08:00');
+  const [jSaidaAlmoco, setJSaidaAlmoco] = useState(config.jornadaSaidaAlmoco || '11:00');
+  const [jVoltaAlmoco, setJVoltaAlmoco] = useState(config.jornadaVoltaAlmoco || '12:00');
+  const [jSaida, setJSaida] = useState(config.jornadaSaida || '17:00');
+  const [tolerancia, setTolerancia] = useState(String(Number.isFinite(config.tolerancia) ? config.tolerancia : 15));
   const [showNovo, setShowNovo] = useState(false);
   const [showNovoFeriado, setShowNovoFeriado] = useState(false);
 
@@ -30,24 +34,70 @@ export default function Configuracoes({
       {/* Colaborador */}
       <div style={card}>
         <div style={{ ...sectionTitle, marginBottom: 18 }}>Dados do colaborador</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <span style={label}>Nome</span>
+          <input
+            value={nome} onChange={(e) => setNome(e.target.value)}
+            onBlur={() => saveConfig({ funcionario: nome })}
+            placeholder="Nome do colaborador" style={textInput}
+          />
+        </label>
+      </div>
+
+      {/* Jornada por intervalos */}
+      <div style={card}>
+        <div style={{ ...sectionTitle, marginBottom: 18 }}>Jornada de trabalho</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 18 }}>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <span style={label}>Nome</span>
+            <span style={label}>Entrada</span>
             <input
-              value={nome} onChange={(e) => setNome(e.target.value)}
-              onBlur={() => saveConfig({ funcionario: nome })}
-              placeholder="Nome do colaborador" style={textInput}
-            />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            <span style={label}>Jornada / dia</span>
-            <input
-              value={jornada} onChange={(e) => setJornada(maskHora(e.target.value))}
-              onBlur={() => saveConfig({ cargaPadrao: jornada })}
+              value={jEntrada} onChange={(e) => setJEntrada(maskHora(e.target.value))}
+              onBlur={() => saveConfig({ jornadaEntrada: jEntrada })}
               inputMode="numeric" maxLength={5} placeholder="08:00" style={monoInput}
             />
           </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <span style={label}>Saída almoço</span>
+            <input
+              value={jSaidaAlmoco} onChange={(e) => setJSaidaAlmoco(maskHora(e.target.value))}
+              onBlur={() => saveConfig({ jornadaSaidaAlmoco: jSaidaAlmoco })}
+              inputMode="numeric" maxLength={5} placeholder="11:00" style={monoInput}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <span style={label}>Volta almoço</span>
+            <input
+              value={jVoltaAlmoco} onChange={(e) => setJVoltaAlmoco(maskHora(e.target.value))}
+              onBlur={() => saveConfig({ jornadaVoltaAlmoco: jVoltaAlmoco })}
+              inputMode="numeric" maxLength={5} placeholder="12:00" style={monoInput}
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <span style={label}>Saída</span>
+            <input
+              value={jSaida} onChange={(e) => setJSaida(maskHora(e.target.value))}
+              onBlur={() => saveConfig({ jornadaSaida: jSaida })}
+              inputMode="numeric" maxLength={5} placeholder="17:00" style={monoInput}
+            />
+          </label>
         </div>
+
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 7, maxWidth: 200 }}>
+          <span style={label}>Tolerância (minutos)</span>
+          <input
+            value={tolerancia}
+            onChange={(e) => setTolerancia(e.target.value.replace(/\D/g, '').slice(0, 3))}
+            onBlur={() => saveConfig({ tolerancia: parseInt(tolerancia, 10) || 0 })}
+            inputMode="numeric" placeholder="15" style={monoInput}
+          />
+        </label>
+
+        <p style={{ fontSize: 12, color: th.muted, lineHeight: 1.5, margin: '16px 0 0' }}>
+          Chegar até a tolerância antes da entrada (ou sair até a tolerância depois da saída) não gera hora
+          extra — só o que passar disso conta. Chegar atrasado ou sair antes do horário conta 100% como atraso,
+          sem tolerância. No intervalo de almoço, um retorno mais cedo que o esperado não gera extra; um retorno
+          mais tarde conta como atraso.
+        </p>
       </div>
 
       {/* Períodos */}

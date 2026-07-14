@@ -21,9 +21,32 @@ export function maskHora(v) {
   return d.slice(0, 2) + ':' + d.slice(2);
 }
 
-// r: { carga, entrada, saidaAlmoco, voltaAlmoco, saida, falta }, jornadaPadrao: "HH:MM"
-export function compute(r, jornadaPadrao) {
-  const carga = parseHora(r.carga) ?? parseHora(jornadaPadrao);
+// Ponto de entrada: chegar até `toleranciaMin` antes do esperado não gera extra (só o que
+// passar da tolerância). Chegar atrasado conta 100% do atraso, sem tolerância nenhuma.
+function toleranciaEntrada(realMin, esperadoMin, toleranciaMin) {
+  if (realMin <= esperadoMin) {
+    const cedo = esperadoMin - realMin;
+    return { extra: Math.max(0, cedo - toleranciaMin), atraso: 0 };
+  }
+  return { extra: 0, atraso: realMin - esperadoMin };
+}
+
+// Ponto de saída: sair até `toleranciaMin` depois do esperado não gera extra (só o que
+// passar da tolerância). Sair antes conta 100% como atraso, sem tolerância nenhuma.
+function toleranciaSaida(realMin, esperadoMin, toleranciaMin) {
+  if (realMin >= esperadoMin) {
+    const tarde = realMin - esperadoMin;
+    return { extra: Math.max(0, tarde - toleranciaMin), atraso: 0 };
+  }
+  return { extra: 0, atraso: esperadoMin - realMin };
+}
+
+// r: { carga, entrada, saidaAlmoco, voltaAlmoco, saida, falta }
+// jornada: "HH:MM" (carga padrão, modo legado) ou objeto
+//   { entrada, saidaAlmoco, voltaAlmoco, saida, tolerancia, cargaPadrao }
+export function compute(r, jornada) {
+  const j = typeof jornada === 'string' ? { cargaPadrao: jornada } : (jornada || {});
+  const carga = parseHora(r.carga) ?? parseHora(j.cargaPadrao);
 
   // Falta: dia inteiro conta como débito (carga negativa), independente de marcações.
   if (r.falta) {
@@ -53,6 +76,36 @@ export function compute(r, jornadaPadrao) {
     have = true;
   }
   if (!have) return { have: false, worked: 0, diff: 0, filled, carga };
-  const diff = worked - (carga ?? 0);
+
+  const jE = parseHora(j.entrada);
+  const jSA = parseHora(j.saidaAlmoco);
+  const jVA = parseHora(j.voltaAlmoco);
+  const jS = parseHora(j.saida);
+  const tolerancia = Number.isFinite(j.tolerancia) ? j.tolerancia : 15;
+
+  let diff;
+  if (filled === 4 && jE != null && jSA != null && jVA != null && jS != null) {
+    let extra = 0;
+    let atraso = 0;
+
+    const cEntrada = toleranciaEntrada(e, jE, tolerancia);
+    extra += cEntrada.extra;
+    atraso += cEntrada.atraso;
+
+    // Intervalo de almoço: só sobra atraso se o intervalo real for MAIOR que o esperado.
+    // Um intervalo mais curto que o esperado não gera horas extras.
+    const intervaloReal = va - sa;
+    const intervaloEsperado = jVA - jSA;
+    if (intervaloReal > intervaloEsperado) atraso += intervaloReal - intervaloEsperado;
+
+    const cSaida = toleranciaSaida(s, jS, tolerancia);
+    extra += cSaida.extra;
+    atraso += cSaida.atraso;
+
+    diff = extra - atraso;
+  } else {
+    diff = worked - (carga ?? 0);
+  }
+
   return { have: true, worked, diff, carga, filled };
 }

@@ -2,8 +2,8 @@ import { compute, fmtMinutos, parseHora } from '../lib/time';
 import { fmtDataBR } from '../lib/feriados';
 import { IconAlert } from '../components/Icons';
 
-export default function Painel({ th, rows, cargaPadrao, saldoPeriodo: totais, diasForaDePeriodo = [] }) {
-  const computed = rows.map((r) => compute(r, cargaPadrao));
+export default function Painel({ th, rows, cargaPadrao, jornada, saldoPeriodo: totais, diasForaDePeriodo = [] }) {
+  const computed = rows.map((r) => compute(r, jornada ?? cargaPadrao));
   let maxV = parseHora(cargaPadrao) || 480;
   computed.forEach((c) => { if (c.have && c.worked > maxV) maxV = c.worked; });
 
