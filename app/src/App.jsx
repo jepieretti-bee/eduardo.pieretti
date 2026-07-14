@@ -3,7 +3,7 @@ import { api } from './lib/api';
 import { resolveTheme, cssVars } from './lib/theme';
 import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
 import { maskHora, compute, fmtMinutos } from './lib/time';
-import { isLocked } from './lib/periodos';
+import { isLocked, foraDePeriodo } from './lib/periodos';
 import { feriadoDoDia, fmtDataBR, fmtRangeBR } from './lib/feriados';
 
 import Sidebar from './components/Sidebar';
@@ -15,6 +15,10 @@ import Configuracoes from './views/Configuracoes';
 
 const today = new Date();
 const TODAY_ISO = today.toISOString().slice(0, 10);
+
+function temDados(d) {
+  return !!(d && (d.entrada || d.saidaAlmoco || d.voltaAlmoco || d.saida || d.falta));
+}
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -89,6 +93,17 @@ export default function App() {
     periodosOrdenados.forEach((p) => { loadRange(p.dataInicio, p.dataFim); });
   }, [ready, periodosOrdenados, loadRange]);
 
+  // Dias com marcação (ou falta) que não pertencem a nenhum período cadastrado —
+  // eles ficam de fora dos totais do Painel. Baseado só no que já está carregado em
+  // diasMap (meses/períodos já visitados), não é uma varredura completa do histórico.
+  const diasForaDePeriodo = useMemo(
+    () => Object.entries(diasMap)
+      .filter(([iso, d]) => temDados(d) && foraDePeriodo(periodos, iso))
+      .map(([iso]) => iso)
+      .sort(),
+    [diasMap, periodos]
+  );
+
   // Tema: recalcula quando preferência do SO muda (modo "Sistema").
   const [, forceTick] = useState(0);
   useEffect(() => {
@@ -129,6 +144,9 @@ export default function App() {
   }
 
   const rawRows = businessDaysOfMonth(monthKey).map((d) => rowFor(d.iso, d.day, d.label));
+
+  const { start: monthStart, end: monthEnd } = monthRange(monthKey);
+  const diasForaDePeriodoMes = diasForaDePeriodo.filter((iso) => iso >= monthStart && iso <= monthEnd);
 
   // Painel: totais (trabalhadas/extras/atraso/saldo) acumulados em todos os dias do
   // período selecionado na navegação do Painel (pode abranger vários meses), zerando
@@ -288,7 +306,7 @@ export default function App() {
         />
 
         {view === 'painel' && (
-          <Painel th={th} rows={painelRows} cargaPadrao={cargaPadrao} saldoPeriodo={painelInfo} />
+          <Painel th={th} rows={painelRows} cargaPadrao={cargaPadrao} saldoPeriodo={painelInfo} diasForaDePeriodo={diasForaDePeriodo} />
         )}
 
         {view === 'registrar' && (
@@ -316,6 +334,8 @@ export default function App() {
             anyLocked={rawRows.some((r) => isLocked(periodos, r.iso))}
             clearMonth={clearMonth}
             importDias={importDias}
+            diasForaDePeriodo={diasForaDePeriodoMes}
+            foraDePeriodoFn={(iso) => foraDePeriodo(periodos, iso)}
           />
         )}
 

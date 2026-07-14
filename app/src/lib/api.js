@@ -31,5 +31,8 @@ export const api = {
 
   listFeriados: () => request('/api/feriados'),
   createFeriado: (f) => request('/api/feriados', { method: 'POST', body: JSON.stringify(f) }),
-  deleteFeriado: (id) => request(`/api/feriados/${id}`, { method: 'DELETE' })
+  deleteFeriado: (id) => request(`/api/feriados/${id}`, { method: 'DELETE' }),
+
+  getBackup: () => request('/api/backup'),
+  restoreBackup: (backup) => request('/api/backup/restore', { method: 'POST', body: JSON.stringify(backup) })
 };

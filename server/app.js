@@ -153,6 +153,57 @@ app.delete('/api/feriados/:id', (req, res) => {
   res.status(204).end();
 });
 
+// ---------- Backup ----------
+app.get('/api/backup', (req, res) => {
+  const config = db.prepare('SELECT * FROM config WHERE id = 1').get();
+  const periodos = db.prepare('SELECT * FROM periodos ORDER BY dataInicio ASC').all().map((r) => ({ ...r, encerrado: !!r.encerrado }));
+  const feriados = db.prepare('SELECT * FROM feriados ORDER BY data ASC').all();
+  const dias = db.prepare('SELECT * FROM dias ORDER BY data ASC').all().map((r) => ({ ...r, falta: !!r.falta }));
+  res.json({ version: 1, exportedAt: new Date().toISOString(), config, periodos, feriados, dias });
+});
+
+app.post('/api/backup/restore', (req, res) => {
+  const { config, periodos, feriados, dias } = req.body || {};
+  if (!config || !Array.isArray(periodos) || !Array.isArray(feriados) || !Array.isArray(dias)) {
+    return res.status(400).json({ error: 'Arquivo de backup inválido' });
+  }
+  try {
+    db.exec('BEGIN');
+
+    db.prepare('UPDATE config SET empresa = ?, funcionario = ?, cargaPadrao = ?, tema = ? WHERE id = 1').run(
+      config.empresa || 'SIPLAN', config.funcionario || '', config.cargaPadrao || '08:00', config.tema || 'claro'
+    );
+
+    db.exec('DELETE FROM periodos');
+    const insPeriodo = db.prepare(
+      'INSERT INTO periodos (id, nome, dataInicio, dataFim, encerrado, createdAt) VALUES (@id, @nome, @dataInicio, @dataFim, @encerrado, @createdAt)'
+    );
+    periodos.forEach((p) => insPeriodo.run({
+      id: p.id, nome: p.nome || '', dataInicio: p.dataInicio, dataFim: p.dataFim,
+      encerrado: p.encerrado ? 1 : 0, createdAt: p.createdAt || new Date().toISOString()
+    }));
+
+    db.exec('DELETE FROM feriados');
+    const insFeriado = db.prepare('INSERT INTO feriados (id, data, nome) VALUES (@id, @data, @nome)');
+    feriados.forEach((f) => insFeriado.run({ id: f.id, data: f.data, nome: f.nome || '' }));
+
+    db.exec('DELETE FROM dias');
+    const insDia = db.prepare(
+      'INSERT INTO dias (data, carga, entrada, saidaAlmoco, voltaAlmoco, saida, falta) VALUES (@data, @carga, @entrada, @saidaAlmoco, @voltaAlmoco, @saida, @falta)'
+    );
+    dias.forEach((d) => insDia.run({
+      data: d.data, carga: d.carga ?? null, entrada: d.entrada || '', saidaAlmoco: d.saidaAlmoco || '',
+      voltaAlmoco: d.voltaAlmoco || '', saida: d.saida || '', falta: d.falta ? 1 : 0
+    }));
+
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    return res.status(500).json({ error: 'Falha ao restaurar backup: ' + e.message });
+  }
+  res.status(204).end();
+});
+
 // ---------- Frontend estático (build do app React), usado no empacotamento desktop ----------
 const staticDir = process.env.STATIC_DIR || path.join(__dirname, 'public');
 if (fs.existsSync(path.join(staticDir, 'index.html'))) {

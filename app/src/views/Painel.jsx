@@ -1,6 +1,8 @@
 import { compute, fmtMinutos, parseHora } from '../lib/time';
+import { fmtDataBR } from '../lib/feriados';
+import { IconAlert } from '../components/Icons';
 
-export default function Painel({ th, rows, cargaPadrao, saldoPeriodo: totais }) {
+export default function Painel({ th, rows, cargaPadrao, saldoPeriodo: totais, diasForaDePeriodo = [] }) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
   let maxV = parseHora(cargaPadrao) || 480;
   computed.forEach((c) => { if (c.have && c.worked > maxV) maxV = c.worked; });
@@ -25,6 +27,17 @@ export default function Painel({ th, rows, cargaPadrao, saldoPeriodo: totais }) 
 
   return (
     <div>
+      {diasForaDePeriodo.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: th.focus, border: `1px solid ${th.accent}`, borderRadius: 11, padding: '13px 18px', marginBottom: 20, color: th.accent, fontSize: '13.5px', fontWeight: 700 }}>
+          <IconAlert />
+          <span>
+            {diasForaDePeriodo.length} dia(s) com marcação fora de qualquer período cadastrado — não entram nos totais acima:{' '}
+            {diasForaDePeriodo.slice(0, 6).map(fmtDataBR).join(', ')}
+            {diasForaDePeriodo.length > 6 ? ` e mais ${diasForaDePeriodo.length - 6}` : ''}.
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 20 }}>
         {kpis.map((k) => (
           <div key={k.label} style={{ ...card, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>

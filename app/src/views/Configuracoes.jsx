@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { maskHora } from '../lib/time';
 import { fmtDataBR } from '../lib/feriados';
+import { api } from '../lib/api';
 
 const TEMA_OPTS = [
   ['sistema', 'Sistema'],
@@ -150,6 +151,95 @@ export default function Configuracoes({
           })}
         </div>
       </div>
+
+      {/* Backup */}
+      <BackupSection th={th} card={card} sectionTitle={sectionTitle} />
+    </div>
+  );
+}
+
+function BackupSection({ th, card, sectionTitle }) {
+  const fileInputRef = useRef(null);
+  const [status, setStatus] = useState(null); // null | { kind:'confirm', backup } | { kind:'restoring' } | { kind:'done' } | { kind:'error', message }
+
+  async function baixar() {
+    const backup = await api.getBackup();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `controle-ponto-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function onFileChosen(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const backup = JSON.parse(reader.result);
+        if (!backup || typeof backup !== 'object' || !Array.isArray(backup.dias)) {
+          throw new Error('formato inválido');
+        }
+        setStatus({ kind: 'confirm', backup });
+      } catch {
+        setStatus({ kind: 'error', message: 'Esse arquivo não parece ser um backup válido.' });
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function confirmarRestaurar() {
+    if (status?.kind !== 'confirm') return;
+    setStatus({ kind: 'restoring' });
+    try {
+      await api.restoreBackup(status.backup);
+      window.location.reload();
+    } catch {
+      setStatus({ kind: 'error', message: 'Não foi possível restaurar esse backup.' });
+    }
+  }
+
+  const btn = { cursor: 'pointer', background: th.panel, border: `1px solid ${th.border}`, color: th.text, borderRadius: 9, padding: '11px 18px', fontSize: 13.5, fontWeight: 700, fontFamily: 'Lato' };
+
+  return (
+    <div style={card}>
+      <div style={{ ...sectionTitle, marginBottom: 18 }}>Backup</div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: status ? 14 : 0 }}>
+        <button onClick={baixar} style={{ ...btn, background: th.accent, color: '#fff', border: 'none' }}>Baixar backup</button>
+        <button onClick={() => fileInputRef.current?.click()} style={btn}>Restaurar backup</button>
+        <input ref={fileInputRef} type="file" accept="application/json" onChange={onFileChosen} style={{ display: 'none' }} />
+      </div>
+
+      {status?.kind === 'confirm' && (
+        <div style={{ background: th.focus, border: `1px solid ${th.debit}`, borderRadius: 10, padding: '14px 16px' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: th.debit, fontWeight: 700, lineHeight: 1.5 }}>
+            Isso vai substituir TODOS os dados atuais (colaborador, períodos, feriados e marcações) pelos do arquivo
+            {' '}"{status.backup.exportedAt ? fmtDataBR(status.backup.exportedAt.slice(0, 10)) : 'selecionado'}". Essa ação não pode ser desfeita.
+          </p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={confirmarRestaurar} style={{ ...btn, background: th.debit, color: '#fff', border: 'none' }}>Confirmar restauração</button>
+            <button onClick={() => setStatus(null)} style={btn}>Cancelar</button>
+          </div>
+        </div>
+      )}
+      {status?.kind === 'restoring' && <span style={{ fontSize: 13.5, color: th.muted }}>Restaurando…</span>}
+      {status?.kind === 'error' && (
+        <div>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: th.debit, margin: '0 0 8px' }}>{status.message}</p>
+          <button onClick={() => setStatus(null)} style={btn}>Fechar</button>
+        </div>
+      )}
+
+      <p style={{ fontSize: 12, color: th.muted, lineHeight: 1.5, margin: '16px 0 0' }}>
+        O backup é um arquivo .json com todos os seus dados (colaborador, períodos, feriados e marcações). Guarde-o num
+        lugar seguro (nuvem, pendrive) — sem ele, formatar ou trocar de computador apaga tudo.
+      </p>
     </div>
   );
 }

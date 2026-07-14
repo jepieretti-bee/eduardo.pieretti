@@ -11,6 +11,12 @@ export function isLocked(periodos, iso) {
   return !!(p && p.encerrado);
 }
 
+// Verdadeiro quando há períodos cadastrados mas nenhum deles cobre essa data —
+// usado para avisar sobre dias com marcação "órfãos" (fora de todo período).
+export function foraDePeriodo(periodos, iso) {
+  return (periodos || []).length > 0 && periodoForDate(periodos, iso) == null;
+}
+
 // Retorna o período cujo intervalo [dataInicio,dataFim] sobrepõe [rangeStart,rangeEnd]
 // (ex.: o mês em exibição), mesmo que o período não comece no dia 1º do mês.
 // Usado para acumular o saldo do banco de horas por período, não por mês.

@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
 import { compute, fmtMinutos } from '../lib/time';
-import { IconLock } from '../components/Icons';
+import { IconLock, IconAlert } from '../components/Icons';
 import { extrairMarcacoesPdf } from '../lib/pdfImport';
 import { fmtDataBR } from '../lib/feriados';
 
-export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, importDias }) {
+export default function Espelho({
+  th, rows, cargaPadrao, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, importDias,
+  diasForaDePeriodo = [], foraDePeriodoFn
+}) {
   const computed = rows.map((r) => compute(r, cargaPadrao));
   const fileInputRef = useRef(null);
   const [importState, setImportState] = useState(null);
@@ -59,6 +62,13 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta,
         </div>
       )}
 
+      {diasForaDePeriodo.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, background: th.focus, border: `1px solid ${th.accent}`, borderRadius: 11, padding: '13px 18px', marginBottom: 16, color: th.accent, fontSize: '13.5px', fontWeight: 700 }}>
+          <IconAlert />
+          {diasForaDePeriodo.length} dia(s) deste mês não pertencem a nenhum período cadastrado ({diasForaDePeriodo.map(fmtDataBR).join(', ')}) — não entram nos totais do Painel.
+        </div>
+      )}
+
       <div className="no-print" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <button onClick={() => window.print()} style={toolBtn(th)}>Imprimir</button>
         <button onClick={handleClear} style={toolBtn(th)}>Limpar mês</button>
@@ -86,6 +96,15 @@ export default function Espelho({ th, rows, cargaPadrao, updateDia, toggleFalta,
               <div style={{ fontSize: 12.5, color: th.muted, marginBottom: 12 }}>
                 Isso vai sobrescrever entrada/saída dos dias listados (mesmo em outros meses) e remover a marcação de falta desses dias. Dias em períodos encerrados são pulados.
               </div>
+              {foraDePeriodoFn && (() => {
+                const fora = Object.keys(importState.porDia).filter(foraDePeriodoFn).sort();
+                return fora.length > 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: th.focus, border: `1px solid ${th.accent}`, borderRadius: 9, padding: '10px 12px', marginBottom: 12, color: th.accent, fontSize: '12.5px', fontWeight: 700 }}>
+                    <IconAlert width={15} height={15} />
+                    {fora.length} dia(s) importado(s) ficam fora de qualquer período cadastrado: {fora.map(fmtDataBR).join(', ')}. Ajuste o período em Configurações se quiser que entrem nos totais do Painel.
+                  </div>
+                ) : null;
+              })()}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={confirmarImport} style={{ ...toolBtn(th), background: th.accent, color: '#fff', border: 'none' }}>
                   Confirmar importação
