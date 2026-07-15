@@ -13,12 +13,15 @@ export default function Espelho({
   const [importState, setImportState] = useState(null);
 
   let sumWorked = 0, sumExtras = 0, sumAtraso = 0;
-  computed.forEach((c) => {
+  let saldoAcumulado = 0;
+  const saldos = computed.map((c) => {
     if (c.have) {
       sumWorked += c.worked;
       sumExtras += c.extra;
       sumAtraso += c.atraso;
+      saldoAcumulado += c.diff;
     }
+    return saldoAcumulado;
   });
 
   async function handleFileChosen(e) {
@@ -141,7 +144,8 @@ export default function Espelho({
               <th style={thStyle('center', '13px 8px')}>Saída</th>
               <th style={thStyle('center', '13px 8px')}>Trabalhadas</th>
               <th style={thStyle('center', '13px 8px')}>Extras</th>
-              <th style={thStyle('center', '13px 16px')}>Atraso</th>
+              <th style={thStyle('center', '13px 8px')}>Atraso</th>
+              <th style={thStyle('center', '13px 16px')}>Saldo</th>
             </tr>
           </thead>
           <tbody>
@@ -156,6 +160,9 @@ export default function Espelho({
                 extrasColor = c.extra > 0 ? th.credit : th.muted;
                 bhColor = c.atraso > 0 ? th.debit : th.muted;
               }
+              const saldo = saldos[idx];
+              const saldoTxt = (saldo > 0 ? '+' : '') + fmtMinutos(saldo);
+              const saldoColor = saldo > 0 ? th.credit : saldo < 0 ? th.debit : th.muted;
               const punchesDisabled = locked || row.falta;
               const rowBg = row.falta ? th.focus : (row.isFeriado ? th.stripe : (idx % 2 ? 'transparent' : th.stripe));
               return (
@@ -193,7 +200,8 @@ export default function Espelho({
                   </td>
                   <td style={{ padding: '11px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{row.falta ? 'Falta' : horasTrab}</td>
                   <td style={{ padding: '11px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: extrasColor }}>{extras}</td>
-                  <td style={{ padding: '11px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: bhColor }}>{bh}</td>
+                  <td style={{ padding: '11px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 500, color: bhColor }}>{bh}</td>
+                  <td style={{ padding: '11px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600, color: saldoColor }}>{saldoTxt}</td>
                 </tr>
               );
             })}
@@ -203,7 +211,10 @@ export default function Espelho({
               <td style={{ padding: '13px 16px', fontFamily: "'Oswald',sans-serif", textTransform: 'uppercase', letterSpacing: '.5px' }} colSpan={7}>Resultado do mês</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmtMinutos(sumWorked)}</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: th.credit }}>{fmtMinutos(sumExtras)}</td>
-              <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: sumAtraso > 0 ? th.debit : th.muted }}>{fmtMinutos(sumAtraso)}</td>
+              <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: sumAtraso > 0 ? th.debit : th.muted }}>{fmtMinutos(sumAtraso)}</td>
+              <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: saldoAcumulado > 0 ? th.credit : saldoAcumulado < 0 ? th.debit : th.muted }}>
+                {(saldoAcumulado > 0 ? '+' : '') + fmtMinutos(saldoAcumulado)}
+              </td>
             </tr>
           </tfoot>
         </table>
