@@ -176,7 +176,8 @@ export default function App() {
     if (c.have) {
       acc.sumWorked += c.worked;
       acc.sumCarga += c.carga ?? 0;
-      if (c.diff > 0) acc.sumExtras += c.diff; else acc.sumDebit += -c.diff;
+      acc.sumExtras += c.extra;
+      acc.sumDebit += c.atraso;
       acc.saldo += c.diff;
       acc.daysDone++;
     }

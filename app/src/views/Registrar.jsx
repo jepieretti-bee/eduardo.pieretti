@@ -108,11 +108,11 @@ export default function Registrar({ th, rows, jornada, selectedIso, onPrevDay, o
         </div>
         <div style={resultCard}>
           <div style={resultLabel}>Extras</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 24, fontWeight: 600, color: th.credit }}>{sc.have && sc.diff > 0 ? fmtMinutos(sc.diff) : '0:00'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 24, fontWeight: 600, color: th.credit }}>{sc.have ? fmtMinutos(sc.extra) : '0:00'}</div>
         </div>
         <div style={resultCard}>
           <div style={resultLabel}>BH / Atr / Falta</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 24, fontWeight: 600, color: th.debit }}>{sc.have && sc.diff < 0 ? fmtMinutos(-sc.diff) : '0:00'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 24, fontWeight: 600, color: th.debit }}>{sc.have ? fmtMinutos(sc.atraso) : '0:00'}</div>
         </div>
       </div>
 

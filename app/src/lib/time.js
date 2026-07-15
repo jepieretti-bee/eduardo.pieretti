@@ -47,7 +47,7 @@ export function compute(r, jornada) {
 
   // Falta: dia inteiro conta como débito (carga negativa), independente de marcações.
   if (r.falta) {
-    return { have: true, worked: 0, diff: -(carga ?? 0), carga, filled: 0, falta: true };
+    return { have: true, worked: 0, diff: -(carga ?? 0), extra: 0, atraso: carga ?? 0, carga, filled: 0, falta: true };
   }
 
   const e = parseHora(r.entrada);
@@ -72,7 +72,7 @@ export function compute(r, jornada) {
     worked = s - e;
     have = true;
   }
-  if (!have) return { have: false, worked: 0, diff: 0, filled, carga };
+  if (!have) return { have: false, worked: 0, diff: 0, extra: 0, atraso: 0, filled, carga };
 
   const jE = parseHora(j.entrada);
   const jSA = parseHora(j.saidaAlmoco);
@@ -82,11 +82,9 @@ export function compute(r, jornada) {
 
   const jornadaCompleta = jE != null && jSA != null && jVA != null && jS != null;
 
-  let diff;
+  let extra = 0;
+  let atraso = 0;
   if (jornadaCompleta) {
-    let extra = 0;
-    let atraso = 0;
-
     if (e != null) {
       const cEntrada = diffEntrada(e, jE);
       extra += cEntrada.extra;
@@ -114,11 +112,13 @@ export function compute(r, jornada) {
       // marcação — debita a duração esperada do bloco da manhã por completo.
       atraso += jSA - jE;
     }
-
-    diff = extra - atraso;
   } else {
-    diff = worked - (carga ?? 0);
+    const diffSimples = worked - (carga ?? 0);
+    extra = diffSimples > 0 ? diffSimples : 0;
+    atraso = diffSimples < 0 ? -diffSimples : 0;
   }
 
-  return { have: true, worked, diff, carga, filled };
+  const diff = extra - atraso;
+
+  return { have: true, worked, diff, extra, atraso, carga, filled };
 }

@@ -16,7 +16,8 @@ export default function Espelho({
   computed.forEach((c) => {
     if (c.have) {
       sumWorked += c.worked;
-      if (c.diff > 0) sumExtras += c.diff; else sumAtraso += -c.diff;
+      sumExtras += c.extra;
+      sumAtraso += c.atraso;
     }
   });
 
@@ -150,10 +151,10 @@ export default function Espelho({
               let horasTrab = '', extras = '', bh = '', extrasColor = th.muted, bhColor = th.muted;
               if (c.have) {
                 horasTrab = fmtMinutos(c.worked);
-                extras = c.diff > 0 ? fmtMinutos(c.diff) : '0:00';
-                bh = c.diff < 0 ? fmtMinutos(-c.diff) : '0:00';
-                extrasColor = c.diff > 0 ? th.credit : th.muted;
-                bhColor = c.diff < 0 ? th.debit : th.muted;
+                extras = fmtMinutos(c.extra);
+                bh = fmtMinutos(c.atraso);
+                extrasColor = c.extra > 0 ? th.credit : th.muted;
+                bhColor = c.atraso > 0 ? th.debit : th.muted;
               }
               const punchesDisabled = locked || row.falta;
               const rowBg = row.falta ? th.focus : (row.isFeriado ? th.stripe : (idx % 2 ? 'transparent' : th.stripe));
