@@ -3,7 +3,7 @@ import { api } from './lib/api';
 import { resolveTheme, cssVars } from './lib/theme';
 import { businessDaysOfMonth, businessDaysInRange, monthLabel, monthRange, shiftMonthKey, monthKeyOf } from './lib/dates';
 import { maskHora, compute, fmtMinutos, parseHora } from './lib/time';
-import { isLocked, foraDePeriodo } from './lib/periodos';
+import { isLocked, foraDePeriodo, periodoForDate } from './lib/periodos';
 import { feriadoDoDia, fmtDataBR, fmtRangeBR } from './lib/feriados';
 
 import Sidebar from './components/Sidebar';
@@ -164,6 +164,21 @@ export default function App() {
 
   const { start: monthStart, end: monthEnd } = monthRange(monthKey);
   const diasForaDePeriodoMes = diasForaDePeriodo.filter((iso) => iso >= monthStart && iso <= monthEnd);
+
+  // Espelho: saldo acumulado do banco de horas até cada dia, contando desde o início
+  // do período ao qual o dia pertence (não do mês) — mesma lógica do Painel, só que
+  // exibida dia a dia. Dias fora de qualquer período cadastrado ficam sem saldo (null).
+  function saldoAcumuladoAte(iso) {
+    const periodo = periodoForDate(periodos, iso);
+    if (!periodo) return null;
+    let saldo = 0;
+    businessDaysInRange(periodo.dataInicio, iso).forEach((d) => {
+      const c = compute(rowFor(d.iso, d.day, d.label), jornada);
+      if (c.have) saldo += c.diff;
+    });
+    return saldo;
+  }
+  const saldosEspelho = rawRows.map((r) => saldoAcumuladoAte(r.iso));
 
   // Painel: totais (trabalhadas/extras/atraso/saldo) acumulados em todos os dias do
   // período selecionado na navegação do Painel (pode abranger vários meses), zerando
@@ -356,6 +371,7 @@ export default function App() {
             importDias={importDias}
             diasForaDePeriodo={diasForaDePeriodoMes}
             foraDePeriodoFn={(iso) => foraDePeriodo(periodos, iso)}
+            saldos={saldosEspelho}
           />
         )}
 

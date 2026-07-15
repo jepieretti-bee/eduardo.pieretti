@@ -6,23 +6,28 @@ import { fmtDataBR } from '../lib/feriados';
 
 export default function Espelho({
   th, rows, cargaPadrao, jornada, updateDia, toggleFalta, isLocked, anyLocked, clearMonth, importDias,
-  diasForaDePeriodo = [], foraDePeriodoFn
+  diasForaDePeriodo = [], foraDePeriodoFn, saldos: saldosPeriodo = []
 }) {
   const computed = rows.map((r) => compute(r, jornada ?? cargaPadrao));
   const fileInputRef = useRef(null);
   const [importState, setImportState] = useState(null);
 
   let sumWorked = 0, sumExtras = 0, sumAtraso = 0;
-  let saldoAcumulado = 0;
-  const saldos = computed.map((c) => {
+  computed.forEach((c) => {
     if (c.have) {
       sumWorked += c.worked;
       sumExtras += c.extra;
       sumAtraso += c.atraso;
-      saldoAcumulado += c.diff;
     }
-    return saldoAcumulado;
   });
+
+  // Saldo final exibido no rodapé: último valor não-nulo da coluna (o mais recente
+  // dentro de um período cadastrado), já que os últimos dias do mês podem estar
+  // fora de qualquer período.
+  let saldoFinal = null;
+  for (let i = saldosPeriodo.length - 1; i >= 0; i--) {
+    if (saldosPeriodo[i] != null) { saldoFinal = saldosPeriodo[i]; break; }
+  }
 
   async function handleFileChosen(e) {
     const file = e.target.files?.[0];
@@ -160,9 +165,9 @@ export default function Espelho({
                 extrasColor = c.extra > 0 ? th.credit : th.muted;
                 bhColor = c.atraso > 0 ? th.debit : th.muted;
               }
-              const saldo = saldos[idx];
-              const saldoTxt = (saldo > 0 ? '+' : '') + fmtMinutos(saldo);
-              const saldoColor = saldo > 0 ? th.credit : saldo < 0 ? th.debit : th.muted;
+              const saldo = saldosPeriodo[idx];
+              const saldoTxt = saldo == null ? '—' : (saldo > 0 ? '+' : '') + fmtMinutos(saldo);
+              const saldoColor = saldo == null ? th.muted : saldo > 0 ? th.credit : saldo < 0 ? th.debit : th.muted;
               const punchesDisabled = locked || row.falta;
               const rowBg = row.falta ? th.focus : (row.isFeriado ? th.stripe : (idx % 2 ? 'transparent' : th.stripe));
               return (
@@ -212,8 +217,8 @@ export default function Espelho({
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", fontWeight: 600 }}>{fmtMinutos(sumWorked)}</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: th.credit }}>{fmtMinutos(sumExtras)}</td>
               <td style={{ padding: '13px 8px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: sumAtraso > 0 ? th.debit : th.muted }}>{fmtMinutos(sumAtraso)}</td>
-              <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: saldoAcumulado > 0 ? th.credit : saldoAcumulado < 0 ? th.debit : th.muted }}>
-                {(saldoAcumulado > 0 ? '+' : '') + fmtMinutos(saldoAcumulado)}
+              <td style={{ padding: '13px 16px', textAlign: 'center', fontFamily: "'IBM Plex Mono',monospace", color: saldoFinal == null ? th.muted : saldoFinal > 0 ? th.credit : saldoFinal < 0 ? th.debit : th.muted }}>
+                {saldoFinal == null ? '—' : (saldoFinal > 0 ? '+' : '') + fmtMinutos(saldoFinal)}
               </td>
             </tr>
           </tfoot>
