@@ -1,3 +1,5 @@
+import { parseHora } from './time';
+
 function toIso(dataBR) {
   const [d, m, y] = dataBR.split('/');
   return `${y}-${m}-${d}`;
@@ -8,7 +10,10 @@ function toIso(dataBR) {
 // entrada/saída almoço/volta almoço/saída usados pelo app.
 // pdfjs-dist é carregado sob demanda (dynamic import) para não engordar o bundle
 // inicial de quem nunca usa essa tela.
-export async function extrairMarcacoesPdf(file) {
+// jornada (opcional): { saidaAlmoco, saida } — usada para decidir, num dia com só 2
+// marcações, se a segunda é a saída final do dia ou a saída pro almoço de um dia
+// incompleto (bateu entrada, saiu pro almoço e nunca voltou).
+export async function extrairMarcacoesPdf(file, jornada) {
   const [pdfjsLib, { default: pdfjsWorkerUrl }] = await Promise.all([
     import('pdfjs-dist'),
     import('pdfjs-dist/build/pdf.worker.min.mjs?url')
@@ -40,14 +45,27 @@ export async function extrairMarcacoesPdf(file) {
     throw new Error('Nenhuma marcação de horário foi encontrada nesse PDF.');
   }
 
+  const jSA = parseHora(jornada?.saidaAlmoco);
+  const jS = parseHora(jornada?.saida);
+
   const porDia = {};
   for (const [iso, horasRaw] of Object.entries(porDiaHoras)) {
     const horas = [...horasRaw].sort();
     const p = {};
     if (horas.length === 2) {
-      // Duas marcações no dia: assume entrada + saída direta (sem almoço registrado).
-      p.entrada = horas[0];
-      p.saida = horas[1];
+      const segunda = parseHora(horas[1]);
+      const pertoDoAlmoco = jSA != null && jS != null && segunda != null
+        && Math.abs(segunda - jSA) < Math.abs(segunda - jS);
+      if (pertoDoAlmoco) {
+        // Segunda marcação mais perto do horário de saída pro almoço do que da
+        // saída final: dia incompleto (só bateu entrada e foi almoçar, nunca voltou).
+        p.entrada = horas[0];
+        p.saidaAlmoco = horas[1];
+      } else {
+        // Duas marcações no dia: assume entrada + saída direta (sem almoço registrado).
+        p.entrada = horas[0];
+        p.saida = horas[1];
+      }
     } else {
       if (horas[0]) p.entrada = horas[0];
       if (horas[1]) p.saidaAlmoco = horas[1];

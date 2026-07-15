@@ -35,7 +35,7 @@ export default function Espelho({
     if (!file) return;
     setImportState({ status: 'parsing' });
     try {
-      const { porDia, totalMarcacoes, totalDias } = await extrairMarcacoesPdf(file);
+      const { porDia, totalMarcacoes, totalDias } = await extrairMarcacoesPdf(file, jornada);
       setImportState({ status: 'preview', porDia, totalMarcacoes, totalDias });
     } catch (err) {
       setImportState({ status: 'error', message: err.message || 'Não foi possível ler esse PDF.' });
