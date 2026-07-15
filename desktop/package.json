@@ -1,6 +1,6 @@
 {
   "name": "controle-de-ponto-desktop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Controle de Ponto Siplan — app desktop",
   "main": "main.js",
   "author": "Siplan",
