@@ -93,10 +93,11 @@ export default function Configuracoes({
         </label>
 
         <p style={{ fontSize: 12, color: th.muted, lineHeight: 1.5, margin: '16px 0 0' }}>
-          Chegar até a tolerância antes da entrada (ou sair até a tolerância depois da saída) não gera hora
-          extra — só o que passar disso conta. Chegar atrasado ou sair antes do horário conta 100% como atraso,
-          sem tolerância. No intervalo de almoço, um retorno mais cedo que o esperado não gera extra; um retorno
-          mais tarde conta como atraso.
+          A tolerância vale só para a saída: sair até a tolerância depois do horário não gera hora extra — só o
+          que passar disso conta. A entrada não tem tolerância — todo minuto adiantado é extra e todo minuto
+          atrasado é atraso, sem exceção. Sair antes do horário também conta 100% como atraso, sem tolerância. No
+          intervalo de almoço, um retorno mais cedo que o esperado não gera extra; um retorno mais tarde conta
+          como atraso.
         </p>
       </div>
 

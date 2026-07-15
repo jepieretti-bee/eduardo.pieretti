@@ -66,6 +66,35 @@ if (!configCols.includes('jornadaEntrada')) {
   `);
 }
 
+// Migração: uma versão anterior zerou a tolerância (achando que o Kairos não aplicava
+// nenhuma) — o comparativo com o extrato oficial mostrou que a tolerância é real, só
+// que vale apenas para a saída (entrada nunca teve tolerância). Restaura o padrão da
+// coluna para 15 (via recriação da tabela, já que SQLite não altera DEFAULT em ALTER
+// COLUMN) e corrige quem ficou com o valor 0 daquela versão.
+const tolCol = db.prepare("PRAGMA table_info(config)").all().find((c) => c.name === 'tolerancia');
+if (tolCol && tolCol.dflt_value === '0') {
+  db.exec(`
+    ALTER TABLE config RENAME TO config_old_tolerancia;
+    CREATE TABLE config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      empresa TEXT NOT NULL DEFAULT 'SIPLAN',
+      funcionario TEXT NOT NULL DEFAULT '',
+      cargaPadrao TEXT NOT NULL DEFAULT '08:00',
+      tema TEXT NOT NULL DEFAULT 'claro',
+      jornadaEntrada TEXT NOT NULL DEFAULT '08:00',
+      jornadaSaidaAlmoco TEXT NOT NULL DEFAULT '11:00',
+      jornadaVoltaAlmoco TEXT NOT NULL DEFAULT '12:00',
+      jornadaSaida TEXT NOT NULL DEFAULT '17:00',
+      tolerancia INTEGER NOT NULL DEFAULT 15
+    );
+    INSERT INTO config (id, empresa, funcionario, cargaPadrao, tema, jornadaEntrada, jornadaSaidaAlmoco, jornadaVoltaAlmoco, jornadaSaida, tolerancia)
+      SELECT id, empresa, funcionario, cargaPadrao, tema, jornadaEntrada, jornadaSaidaAlmoco, jornadaVoltaAlmoco, jornadaSaida,
+        CASE WHEN tolerancia = 0 THEN 15 ELSE tolerancia END
+      FROM config_old_tolerancia;
+    DROP TABLE config_old_tolerancia;
+  `);
+}
+
 const configExists = db.prepare('SELECT id FROM config WHERE id = 1').get();
 if (!configExists) {
   db.prepare(
